@@ -37,11 +37,12 @@
   <uses-permission android:name="android.permission.WAKE_LOCK"/>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
   <!--
     Android 13 (API level 33) and higher supports a runtime permission for sending non-exempt (including Foreground
     Services (FGS)) notifications from an app.
   //-->
-  <uses-permission-sdk-23 android:name="android.permission.POST_NOTIFICATIONS"/>
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
   <uses-permission android:name="androidx.car.app.NAVIGATION_TEMPLATES"/>
   <uses-permission android:name="androidx.car.app.ACCESS_SURFACE"/>
@@ -49,6 +50,14 @@
   <queries>
     <intent>
       <action android:name="android.intent.action.TTS_SERVICE"/>
+    </intent>
+    <intent>
+      <action android:name="android.intent.action.OPEN_DOCUMENT_TREE"/>
+    </intent>
+    <intent>
+      <action android:name="android.intent.action.VIEW" />
+      <category android:name="android.intent.category.BROWSABLE" />
+      <data android:scheme="https" />
     </intent>
   </queries>
 
@@ -70,6 +79,7 @@
       android:resizeableActivity="true"
       android:supportsRtl="true"
       android:networkSecurityConfig="@xml/network_security_config"
+      android:manageSpaceActivity="${applicationId}.ManageSpaceActivity"
       tools:targetApi="33">
 
     <!-- Allows for config and orientation change without killing/restarting main activity -->
@@ -318,6 +328,18 @@
         <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.kmb" />
         <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.KMB" />
       </intent-filter>
+
+      <!-- Catches .gpx and .gpx.xml files opened from Google Files app -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <data android:scheme="content" />
+        <data android:host="*" />
+        <data android:mimeType="application/octet-stream" />
+        <data android:mimeType="application/xml" />
+        <data android:mimeType="text/xml" />
+      </intent-filter>
+
     </activity>
 
     <activity
@@ -340,6 +362,11 @@
         android:launchMode="singleTask"
         android:configChanges="uiMode"
         android:windowSoftInputMode="stateAlwaysHidden|adjustPan"/>
+
+    <activity-alias
+        android:name="${applicationId}.ManageSpaceActivity"
+        android:exported="true"
+        android:targetActivity=".SplashActivity" />
 
     <activity
         android:name="app.organicmaps.downloader.DownloaderActivity"
@@ -422,13 +449,20 @@
       android:label="@string/driving_options_title"/>
     <activity
         android:name="app.organicmaps.MapPlaceholderActivity"/>
+    <activity
+        android:name="app.organicmaps.car.screens.permissions.RequestPermissionsActivity"/>
     <service
         android:name="app.organicmaps.car.CarAppService"
-        android:foregroundServiceType="location"
-        android:exported="true">
+        android:exported="true"
+        tools:ignore="ExportedService">
       <intent-filter>
         <action android:name="androidx.car.app.CarAppService" />
         <category android:name="androidx.car.app.category.NAVIGATION" />
+      </intent-filter>
+      <intent-filter>
+        <action android:name="androidx.car.app.action.NAVIGATE" />
+        <category android:name="android.intent.category.DEFAULT"/>
+        <data android:scheme="geo" />
       </intent-filter>
     </service>
 
@@ -438,6 +472,13 @@
         android:exported="false"
         android:enabled="true"
         android:stopWithTask="false"/>
+
+    <service android:name=".location.TrackRecordingService"
+      android:foregroundServiceType="location"
+      android:exported="false"
+      android:enabled="true"
+      android:stopWithTask="false"
+      />
 
     <provider
       android:name="androidx.core.content.FileProvider"

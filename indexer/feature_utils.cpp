@@ -42,7 +42,7 @@ void GetMwmLangName(feature::RegionData const & regionData, StrUtf8 const & src,
   }
 }
 
-bool GetTransliteratedName(feature::RegionData const & regionData, StrUtf8 const & src, string & out)
+bool GetTransliteratedName(RegionData const & regionData, StrUtf8 const & src, string & out)
 {
   vector<int8_t> mwmLangCodes;
   regionData.GetLanguages(mwmLangCodes);
@@ -173,18 +173,6 @@ vector<string> GetRawTypeSecond(ftypes::BaseChecker const & checker, TypesHolder
     res.push_back(std::move(path[1]));
   }
   return res;
-}
-
-vector<string> GetReadableTypes(ftypes::BaseChecker const & checker, TypesHolder const & types)
-{
-  auto const & c = classif();
-  vector<string> readable;
-  for (auto const t : types)
-  {
-    if (checker(t))
-      readable.push_back(c.GetReadableObjectName(t));
-  }
-  return readable;
 }
 
 vector<string> GetLocalizedTypes(ftypes::BaseChecker const & checker, TypesHolder const & types)
@@ -504,6 +492,7 @@ string FormatDrinkingWater(TypesHolder const & types)
     case ftraits::DrinkingWaterAvailability::Yes:
       return std::string{kDrinkingWaterYes};
   }
+  UNREACHABLE();
 }
 
 string FormatStars(uint8_t starsCount)
@@ -562,6 +551,18 @@ Internet InternetFromString(std::string_view inet)
   if (inet == kNo)
     return Internet::No;
   return Internet::Unknown;
+}
+
+YesNoUnknown YesNoUnknownFromString(std::string_view str)
+{
+  if (str.empty())
+    return Unknown;
+  if (str.find(kYes) != string::npos)
+    return Yes;
+  if (str.find(kNo) != string::npos)
+    return No;
+  else
+    return YesNoUnknown::Unknown;
 }
 
 } // namespace feature

@@ -13,22 +13,24 @@ import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
+import androidx.core.view.ViewCompat;
 import androidx.fragment.app.Fragment;
-
 import androidx.fragment.app.FragmentManager;
 import app.organicmaps.MwmApplication;
 import app.organicmaps.R;
 import app.organicmaps.base.BaseMwmToolbarFragment;
+import app.organicmaps.bookmarks.data.Metadata;
 import app.organicmaps.editor.data.Language;
 import app.organicmaps.editor.data.LocalizedName;
 import app.organicmaps.editor.data.LocalizedStreet;
 import app.organicmaps.editor.data.NamesDataSource;
 import app.organicmaps.editor.data.PhoneFragment;
-import app.organicmaps.widget.SearchToolbarController;
-import app.organicmaps.widget.ToolbarController;
 import app.organicmaps.util.ConnectionState;
 import app.organicmaps.util.UiUtils;
 import app.organicmaps.util.Utils;
+import app.organicmaps.util.WindowInsetUtils.PaddingInsetsListener;
+import app.organicmaps.widget.SearchToolbarController;
+import app.organicmaps.widget.ToolbarController;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
@@ -50,7 +52,8 @@ public class EditorHostFragment extends BaseMwmToolbarFragment implements View.O
     STREET,
     CUISINE,
     LANGUAGE,
-    PHONE
+    PHONE,
+    SELF_SERVICE
   }
 
   private Mode mMode;
@@ -65,6 +68,7 @@ public class EditorHostFragment extends BaseMwmToolbarFragment implements View.O
   private int mMandatoryNamesCount = 0;
 
   private static final String NOOB_ALERT_SHOWN = "Alert_for_noob_was_shown";
+
   /**
    *   Used in MultilanguageAdapter to show, select and remove items.
    */
@@ -102,9 +106,9 @@ public class EditorHostFragment extends BaseMwmToolbarFragment implements View.O
     mMandatoryNamesCount = mandatoryNamesCount;
   }
 
-  private void fillNames(boolean needFakes)
+  private void fillNames()
   {
-    NamesDataSource namesDataSource = Editor.nativeGetNamesDataSource(needFakes);
+    NamesDataSource namesDataSource = Editor.nativeGetNamesDataSource();
     setNames(namesDataSource.getNames());
     setMandatoryNamesCount(namesDataSource.getMandatoryNamesCount());
     editMapObject();
@@ -134,7 +138,10 @@ public class EditorHostFragment extends BaseMwmToolbarFragment implements View.O
       mIsNewObject = getArguments().getBoolean(EditorActivity.EXTRA_NEW_OBJECT, false);
     getToolbarController().setTitle(getTitle());
 
-    fillNames(true /* addFakes */);
+    fillNames();
+
+    View fragmentContainer = view.findViewById(R.id.fragment_container);
+    ViewCompat.setOnApplyWindowInsetsListener(fragmentContainer, PaddingInsetsListener.excludeTop());
   }
 
   @StringRes
@@ -170,7 +177,7 @@ public class EditorHostFragment extends BaseMwmToolbarFragment implements View.O
   {
     switch (mMode)
     {
-      case OPENING_HOURS, STREET, CUISINE, LANGUAGE, PHONE -> editMapObject();
+      case OPENING_HOURS, STREET, CUISINE, LANGUAGE, PHONE, SELF_SERVICE -> editMapObject();
       default -> Utils.navigateToParent(requireActivity());
     }
     return true;
@@ -223,6 +230,11 @@ public class EditorHostFragment extends BaseMwmToolbarFragment implements View.O
     editWithFragment(Mode.CUISINE, R.string.select_cuisine, null, CuisineFragment.class, true);
   }
 
+  protected void editSelfService()
+  {
+    editWithFragment(Mode.SELF_SERVICE, R.string.select_option, null, SelfServiceFragment.class, false);
+  }
+
   protected void addLanguage()
   {
     Bundle args = new Bundle();
@@ -247,16 +259,6 @@ public class EditorHostFragment extends BaseMwmToolbarFragment implements View.O
     getChildFragmentManager().beginTransaction()
                              .replace(R.id.fragment_container, fragment, fragmentClass.getName())
                              .commit();
-  }
-
-  protected void editCategory()
-  {
-    if (!mIsNewObject)
-      return;
-
-    final Activity host = requireActivity();
-    host.finish();
-    startActivity(new Intent(host, FeatureCategoryActivity.class));
   }
 
   private void showSearchControls(boolean showSearch)
@@ -297,6 +299,8 @@ public class EditorHostFragment extends BaseMwmToolbarFragment implements View.O
           Editor.nativeSetSelectedCuisines(cuisines);
           editMapObject();
         }
+        case SELF_SERVICE ->
+                setSelection(Metadata.MetadataType.FMD_SELF_SERVICE, ((SelfServiceFragment) getChildFragmentManager().findFragmentByTag(SelfServiceFragment.class.getName())).getSelection());
         case LANGUAGE -> editMapObject();
         case MAP_OBJECT ->
         {
@@ -346,7 +350,7 @@ public class EditorHostFragment extends BaseMwmToolbarFragment implements View.O
   private void processEditedFeatures()
   {
     Context context = requireContext();
-    if (OsmOAuth.isAuthorized(context) || !ConnectionState.INSTANCE.isConnected())
+    if (OsmOAuth.isAuthorized(context))
     {
       Utils.navigateToParent(requireActivity());
       return;
@@ -393,6 +397,12 @@ public class EditorHostFragment extends BaseMwmToolbarFragment implements View.O
     editMapObject();
   }
 
+  public void setSelection(Metadata.MetadataType metadata, String selection)
+  {
+    Editor.nativeSetMetadata(metadata.toInt(), selection);
+    editMapObject();
+  }
+
   public boolean addingNewObject()
   {
     return mIsNewObject;
@@ -402,13 +412,6 @@ public class EditorHostFragment extends BaseMwmToolbarFragment implements View.O
   public void onLanguageSelected(Language lang)
   {
     String name = "";
-    if (lang.code.equals(Language.DEFAULT_LANG_CODE))
-    {
-      fillNames(false /* addFakes */);
-      name = Editor.nativeGetDefaultName();
-      Editor.nativeEnableNamesAdvancedMode();
-    }
-
     addName(Editor.nativeMakeLocalizedName(lang.code, name));
     editMapObject(true /* focusToLastName */);
   }

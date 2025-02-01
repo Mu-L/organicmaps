@@ -191,7 +191,7 @@ void BookmarkDialog::OnExportClick()
       ask.addButton(tr("OK"), QMessageBox::NoRole);
       ask.exec();
     }
-  });
+  }, KmlFileType::Text);
 }
 
 void BookmarkDialog::OnDeleteClick()
@@ -212,7 +212,7 @@ void BookmarkDialog::OnDeleteClick()
       }
       else
       {
-        bm.GetEditSession().DeleteBmCategory(categoryIt->second);
+        bm.GetEditSession().DeleteBmCategory(categoryIt->second, true);
         FillTree();
       }
       return;
@@ -268,7 +268,7 @@ void BookmarkDialog::FillTree()
 
   if (!bm.IsAsyncLoadingInProgress())
   {
-    for (auto catId : bm.GetBmGroupsIdList())
+    for (auto catId : bm.GetUnsortedBmGroupsIdList())
     {
       auto categoryItem = CreateTreeItem(bm.GetCategoryName(catId), categoriesItem);
       m_categories[categoryItem] = catId;

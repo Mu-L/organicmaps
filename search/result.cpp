@@ -87,24 +87,30 @@ std::string GetLocalizedTypeName(uint32_t type)
 
 std::string Result::GetLocalizedFeatureType() const
 {
-  ASSERT_EQUAL(m_resultType, Type::Feature, ());
-  return GetLocalizedTypeName(m_mainType);
+  switch (m_resultType)
+  {
+  case Type::Feature: return GetLocalizedTypeName(m_mainType);
+  case Type::Postcode: return platform::GetLocalizedString("postal_code");
+  default: return {};
+  }
 }
 
 std::string Result::GetFeatureDescription() const
 {
-  ASSERT_EQUAL(m_resultType, Type::Feature, ());
-  std::string featureDescription;
+  std::string res = GetLocalizedFeatureType();
+  if (res.empty())
+    return res;
 
-  auto const append = [&featureDescription](std::string_view sv)
+  auto const append = [&res](std::string_view sv)
   {
-    if (!featureDescription.empty())
-      featureDescription += feature::kFieldsSeparator;
-    featureDescription += sv;
+    if (!res.empty())
+      res += feature::kFieldsSeparator;
+    res += sv;
   };
 
-  if (!m_str.empty())
-    append(GetLocalizedTypeName(m_mainType));
+  // Clear, because GetLocalizedFeatureType will be shown as main title.
+  if (m_str.empty())
+    res.clear();
 
   if (m_mainType != m_matchedType && m_matchedType != 0)
     append(GetLocalizedTypeName(m_matchedType));
@@ -112,7 +118,7 @@ std::string Result::GetFeatureDescription() const
   if (!GetDescription().empty())
     append(GetDescription());
 
-  return featureDescription;
+  return res;
 }
 
 m2::PointD Result::GetFeatureCenter() const
@@ -172,10 +178,20 @@ void Result::AddHighlightRange(pair<uint16_t, uint16_t> const & range)
   m_hightlightRanges.push_back(range);
 }
 
+void Result::AddDescHighlightRange(pair<uint16_t, uint16_t> const & range)
+{
+  m_descHightlightRanges.push_back(range);
+}
+
 pair<uint16_t, uint16_t> const & Result::GetHighlightRange(size_t idx) const
 {
   ASSERT(idx < m_hightlightRanges.size(), ());
   return m_hightlightRanges[idx];
+}
+pair<uint16_t, uint16_t> const & Result::GetDescHighlightRange(size_t idx) const
+{
+  ASSERT(idx < m_descHightlightRanges.size(), ());
+  return m_descHightlightRanges[idx];
 }
 
 void Result::PrependCity(string_view city)

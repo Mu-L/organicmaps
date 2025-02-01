@@ -16,7 +16,7 @@ screenlog.0
 
 data/styles/*/*/out/*
 data/resources-*_design/*
-data/drules_proto_design.bin
+data/drules_proto_default_design.bin
 data/colors_design.txt
 data/patterns_design.txt
 data/bookmarks
@@ -84,7 +84,7 @@ data/[0-9][0-9][0-9][0-9][0-9][0-9]
 data/gps_track.dat
 # temporary files for downloader
 data/settings.ini
-data/world_feed_integration_tests_data
+data/test_data/world_feed_integration_tests_data
 
 # benchmark results
 data/benchmarks/*.trace
@@ -123,6 +123,7 @@ tizen/*/.*
 tizen/*/crash-info/*
 .idea/*
 .idea
+!android/.idea/icon.svg
 
 # Private repository files.
 .private_repository_url
@@ -145,6 +146,7 @@ iphone/Maps/app.omaps/
 
 *.autosave
 
+# CMake
 cmake-build-*
 build/
 
@@ -174,6 +176,9 @@ tools/python/routing/etc/*.ini
 # Helpers
 /node_modules/
 /package-lock.json
+
+# Visual Studio
+.vs
 
 # VS Code
 .vscode

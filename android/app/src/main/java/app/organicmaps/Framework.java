@@ -15,6 +15,8 @@ import app.organicmaps.api.RequestType;
 import app.organicmaps.bookmarks.data.DistanceAndAzimut;
 import app.organicmaps.bookmarks.data.FeatureId;
 import app.organicmaps.bookmarks.data.MapObject;
+import app.organicmaps.products.Product;
+import app.organicmaps.products.ProductsConfig;
 import app.organicmaps.routing.JunctionInfo;
 import app.organicmaps.routing.RouteMarkData;
 import app.organicmaps.routing.RoutePointInfo;
@@ -76,7 +78,12 @@ public class Framework
     // Called from JNI
     @Keep
     @SuppressWarnings("unused")
-    void onPlacePageDeactivated(boolean switchFullScreenMode);
+    void onPlacePageDeactivated();
+
+    // Called from JNI
+    @Keep
+    @SuppressWarnings("unused")
+    void onSwitchFullScreenMode();
   }
 
   public interface RoutingListener
@@ -189,6 +196,7 @@ public class Framework
   public static native String nativeFormatSpeed(double speed);
 
   public static native String nativeGetGe0Url(double lat, double lon, double zoomLevel, String name);
+  public static native String nativeGetGeoUri(double lat, double lon, double zoomLevel, String name);
 
   public static native String nativeGetAddress(double lat, double lon);
 
@@ -234,11 +242,13 @@ public class Framework
   public static native ParsedRoutingData nativeGetParsedRoutingData();
   public static native ParsedSearchRequest nativeGetParsedSearchRequest();
   public static native @Nullable String nativeGetParsedAppName();
+  public static native @Nullable String nativeGetParsedOAuth2Code();
   @Nullable @Size(2)
   public static native double[] nativeGetParsedCenterLatLon();
   public static native @Nullable String nativeGetParsedBackUrl();
 
   public static native void nativeDeactivatePopup();
+  public static native void nativeDeactivateMapSelectionCircle();
 
   public static native String nativeGetDataFileExt();
 
@@ -287,7 +297,7 @@ public class Framework
   // an array with one string "Make a right turn.". The next call of the method returns nothing.
   // nativeGenerateTurnNotifications shall be called by the client when a new position is available.
   @Nullable
-  public static native String[] nativeGenerateNotifications();
+  public static native String[] nativeGenerateNotifications(boolean announceStreets);
 
   private static native void nativeSetSpeedCamManagerMode(int mode);
 
@@ -393,7 +403,7 @@ public class Framework
   }
   /**
    * @param mode - see ChoosePositionMode values.
-   * @param isBusiness selection area will be bounded by building borders, if its true(eg. true for businesses in buildings).
+   * @param isBusiness selection area will be bounded by building borders, if its true (eg. true for businesses in buildings).
    * @param applyPosition if true, map'll be animated to currently selected object.
    */
   public static native void nativeSetChoosePositionMode(@ChoosePositionMode int mode, boolean isBusiness,
@@ -446,13 +456,20 @@ public class Framework
   /**
    * @param countryIsoCode Two-letter ISO country code to use country-specific Kayak.com domain.
    * @param uri `$HOTEL_NAME,-c$CITY_ID-h$HOTEL_ID` URI.
-   * @param startDay the first day of planned stay.
-   * @param lastDay the last day of planned stay.
-   * @param isReferral enable referral code to help the project.
+   * @param firstDaySec the epoch seconds of the first day of planned stay.
+   * @param lastDaySec the epoch seconds of the last day of planned stay.
    * @return a URL to Kayak's hotel page.
    */
   @Nullable
   public static native String nativeGetKayakHotelLink(@NonNull String countryIsoCode, @NonNull String uri,
-                                                      @NonNull Date firstDay, @NonNull Date lastDay,
-                                                      boolean isReferral);
+                                                      long firstDaySec, long lastDaySec);
+
+  public static native boolean nativeShouldShowProducts();
+
+  @Nullable
+  public static native ProductsConfig nativeGetProductsConfiguration();
+
+  public static native void nativeDidCloseProductsPopup(String reason);
+
+  public static native void nativeDidSelectProduct(String title, String link);
 }

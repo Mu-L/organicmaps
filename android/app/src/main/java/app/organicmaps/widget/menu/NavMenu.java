@@ -9,6 +9,8 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import app.organicmaps.R;
 import app.organicmaps.location.LocationHelper;
@@ -16,13 +18,12 @@ import app.organicmaps.routing.RoutingInfo;
 import app.organicmaps.sound.TtsPlayer;
 import app.organicmaps.util.Graphics;
 import app.organicmaps.util.StringUtils;
+import app.organicmaps.util.ThemeUtils;
 import app.organicmaps.util.UiUtils;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Locale;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
 
 public class NavMenu
@@ -199,16 +200,11 @@ public class NavMenu
 
   private void updateTimeEstimate(int seconds)
   {
-    final Calendar currentTime = Calendar.getInstance();
-    currentTime.add(Calendar.SECOND, seconds);
-    DateFormat timeFormat;
-    if (android.text.format.DateFormat.is24HourFormat(mTimeMinuteValue.getContext()))
-      timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
-    else
-      timeFormat = new SimpleDateFormat("h:mm aa", Locale.getDefault());
-    mTimeEstimate.setText(timeFormat.format(currentTime.getTime()));
+    final String format = android.text.format.DateFormat.is24HourFormat(mTimeMinuteValue.getContext())
+            ? "HH:mm" : "h:mm a";
+    final LocalTime localTime = LocalTime.now().plusSeconds(seconds);
+    mTimeEstimate.setText(localTime.format(DateTimeFormatter.ofPattern(format)));
   }
-
 
   private void updateSpeedView(@NonNull RoutingInfo info)
   {
@@ -217,10 +213,20 @@ public class NavMenu
       return;
 
     Pair<String, String> speedAndUnits = StringUtils.nativeFormatSpeedAndUnits(last.getSpeed());
+    mSpeedValue.setText(speedAndUnits.first);
+
+    if (info.speedLimitMps > 0.0 && last.getSpeed() > info.speedLimitMps)
+    {
+      if (info.isSpeedCamLimitExceeded())
+        mSpeedValue.setTextColor(ContextCompat.getColor(mActivity, R.color.white_primary));
+      else
+        mSpeedValue.setTextColor(ContextCompat.getColor(mActivity, R.color.base_red));
+    }
+    else
+      mSpeedValue.setTextColor(ThemeUtils.getColor(mActivity, android.R.attr.textColorPrimary));
 
     mSpeedUnits.setText(speedAndUnits.second);
-    mSpeedValue.setText(speedAndUnits.first);
-    mSpeedViewContainer.setActivated(info.isSpeedLimitExceeded());
+    mSpeedViewContainer.setActivated(info.isSpeedCamLimitExceeded());
   }
 
   public void update(@NonNull RoutingInfo info)

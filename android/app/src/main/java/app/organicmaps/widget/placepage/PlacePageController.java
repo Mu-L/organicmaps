@@ -151,6 +151,8 @@ public class PlacePageController extends Fragment implements
       mPlacePageStatusBarBackground.setLayoutParams(layoutParams);
       return windowInsets;
     });
+
+    ViewCompat.requestApplyInsets(mPlacePage);
   }
 
   @NonNull
@@ -231,7 +233,9 @@ public class PlacePageController extends Fragment implements
   private void setPlacePageHeightBounds()
   {
     final int peekHeight = calculatePeekHeight();
-    final Insets insets = mCurrentWindowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+    final Insets insets = mCurrentWindowInsets != null
+            ? mCurrentWindowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            : Insets.NONE;
     // Make sure the place page can reach the peek height
     final int minHeight = Math.max(peekHeight, mFrameHeight);
     // Prevent the place page from showing under the status bar
@@ -279,6 +283,9 @@ public class PlacePageController extends Fragment implements
    */
   private void animatePeekHeight(int peekHeight)
   {
+    if (mCurrentWindowInsets == null) {
+      return;
+    }
     final int bottomInsets = mCurrentWindowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
     // Make sure to start from the current height of the place page
     final int parentHeight = ((View) mPlacePage.getParent()).getHeight();

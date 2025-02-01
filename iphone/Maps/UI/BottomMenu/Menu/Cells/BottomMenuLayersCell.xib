@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="22155" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="32700.99.1234" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
     <device id="ipad9_7" orientation="landscape" layout="fullscreen" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22131"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22685"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -20,9 +20,9 @@
                     <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="W1i-v6-zbz">
                         <rect key="frame" x="0.0" y="0.0" width="340" height="50"/>
                         <subviews>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Map Layers" textAlignment="natural" lineBreakMode="clip" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Vuk-dn-n2c">
-                                <rect key="frame" x="116" y="13" width="108" height="24"/>
-                                <fontDescription key="fontDescription" type="boldSystem" pointSize="20"/>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Map Layers" textAlignment="natural" lineBreakMode="clip" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Vuk-dn-n2c">
+                                <rect key="frame" x="119.5" y="13" width="101.5" height="24"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="20"/>
                                 <nil key="textColor"/>
                                 <nil key="highlightedColor"/>
                                 <userDefinedRuntimeAttributes>
@@ -30,16 +30,12 @@
                                     <userDefinedRuntimeAttribute type="string" keyPath="localizedText" value="layers_title"/>
                                 </userDefinedRuntimeAttributes>
                             </label>
-                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="2xW-dK-D9y">
-                                <rect key="frame" x="294" y="10" width="30" height="30"/>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="2xW-dK-D9y" customClass="CircleImageButton" customModule="Organic_Maps" customModuleProvider="target">
+                                <rect key="frame" x="296" y="11" width="28" height="28"/>
                                 <constraints>
-                                    <constraint firstAttribute="height" constant="30" id="BD2-bz-n13"/>
-                                    <constraint firstAttribute="width" constant="30" id="Thu-MY-dQm"/>
+                                    <constraint firstAttribute="height" constant="28" id="BD2-bz-n13"/>
+                                    <constraint firstAttribute="width" constant="28" id="Thu-MY-dQm" customClass="I"/>
                                 </constraints>
-                                <state key="normal" image="ic_clear_24"/>
-                                <userDefinedRuntimeAttributes>
-                                    <userDefinedRuntimeAttribute type="string" keyPath="styleName" value="PPCloseButton"/>
-                                </userDefinedRuntimeAttributes>
                                 <connections>
                                     <action selector="onCloseButtonPressed:" destination="KGk-i7-Jjw" eventType="touchUpInside" id="8vd-Pg-Suh"/>
                                 </connections>
@@ -87,16 +83,6 @@
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="g13-pK-Eig" userLabel="Outdoor Button" customClass="BottomMenuLayerButton" customModule="Organic_Maps" customModuleProvider="target">
                                 <rect key="frame" x="0.0" y="0.0" width="102.5" height="64"/>
                                 <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                <userDefinedRuntimeAttributes>
-                                    <userDefinedRuntimeAttribute type="image" keyPath="image" value="btn_menu_outdoors"/>
-                                    <userDefinedRuntimeAttribute type="number" keyPath="spacing">
-                                        <real key="value" value="10"/>
-                                    </userDefinedRuntimeAttribute>
-                                    <userDefinedRuntimeAttribute type="number" keyPath="numberOfLines">
-                                        <integer key="value" value="2"/>
-                                    </userDefinedRuntimeAttribute>
-                                    <userDefinedRuntimeAttribute type="string" keyPath="localizedText" value="button_layer_outdoor"/>
-                                </userDefinedRuntimeAttributes>
                                 <connections>
                                     <action selector="onOutdoorButton:" destination="KGk-i7-Jjw" eventType="touchUpInside" id="UQ2-jj-fPc"/>
                                 </connections>
@@ -104,16 +90,6 @@
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="edA-Mo-3Vx" customClass="BottomMenuLayerButton" customModule="Organic_Maps" customModuleProvider="target">
                                 <rect key="frame" x="102.5" y="0.0" width="103" height="64"/>
                                 <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                <userDefinedRuntimeAttributes>
-                                    <userDefinedRuntimeAttribute type="image" keyPath="image" value="btn_menu_isomaps"/>
-                                    <userDefinedRuntimeAttribute type="number" keyPath="spacing">
-                                        <real key="value" value="10"/>
-                                    </userDefinedRuntimeAttribute>
-                                    <userDefinedRuntimeAttribute type="number" keyPath="numberOfLines">
-                                        <integer key="value" value="2"/>
-                                    </userDefinedRuntimeAttribute>
-                                    <userDefinedRuntimeAttribute type="string" keyPath="localizedText" value="button_layer_isolines"/>
-                                </userDefinedRuntimeAttributes>
                                 <connections>
                                     <action selector="onIsoLinesButton:" destination="KGk-i7-Jjw" eventType="touchUpInside" id="3LS-C2-2Mc"/>
                                 </connections>
@@ -121,16 +97,6 @@
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="4US-fZ-cyg" customClass="BottomMenuLayerButton" customModule="Organic_Maps" customModuleProvider="target">
                                 <rect key="frame" x="205.5" y="0.0" width="102.5" height="64"/>
                                 <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                <userDefinedRuntimeAttributes>
-                                    <userDefinedRuntimeAttribute type="image" keyPath="image" value="btn_menu_subway"/>
-                                    <userDefinedRuntimeAttribute type="number" keyPath="spacing">
-                                        <real key="value" value="10"/>
-                                    </userDefinedRuntimeAttribute>
-                                    <userDefinedRuntimeAttribute type="number" keyPath="numberOfLines">
-                                        <integer key="value" value="2"/>
-                                    </userDefinedRuntimeAttribute>
-                                    <userDefinedRuntimeAttribute type="string" keyPath="localizedText" value="button_layer_subway"/>
-                                </userDefinedRuntimeAttributes>
                                 <connections>
                                     <action selector="onSubwayButton:" destination="KGk-i7-Jjw" eventType="touchUpInside" id="xxM-kP-gT1"/>
                                 </connections>
@@ -158,16 +124,6 @@
                             </mask>
                         </variation>
                     </stackView>
-                    <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="75k-vD-FSR" userLabel="Separator">
-                        <rect key="frame" x="0.0" y="164" width="340" height="1"/>
-                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.12" colorSpace="custom" customColorSpace="sRGB"/>
-                        <constraints>
-                            <constraint firstAttribute="height" constant="1" id="olJ-Rf-VTO"/>
-                        </constraints>
-                        <userDefinedRuntimeAttributes>
-                            <userDefinedRuntimeAttribute type="string" keyPath="styleName" value="Divider"/>
-                        </userDefinedRuntimeAttributes>
-                    </view>
                 </subviews>
                 <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                 <constraints>
@@ -183,12 +139,8 @@
             </tableViewCellContentView>
             <viewLayoutGuide key="safeArea" id="njF-e1-oar"/>
             <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-            <constraints>
-                <constraint firstItem="75k-vD-FSR" firstAttribute="trailing" secondItem="njF-e1-oar" secondAttribute="trailing" id="6Po-s2-mvn"/>
-                <constraint firstItem="njF-e1-oar" firstAttribute="bottom" secondItem="75k-vD-FSR" secondAttribute="bottom" id="mtK-Ba-kQj"/>
-                <constraint firstItem="njF-e1-oar" firstAttribute="leading" secondItem="75k-vD-FSR" secondAttribute="leading" id="nhe-Sa-Mlo"/>
-            </constraints>
             <connections>
+                <outlet property="closeButton" destination="2xW-dK-D9y" id="RQI-hb-JpS"/>
                 <outlet property="isoLinesButton" destination="edA-Mo-3Vx" id="qoC-8w-EqY"/>
                 <outlet property="outdoorButton" destination="g13-pK-Eig" id="ib1-aw-Qv9"/>
                 <outlet property="subwayButton" destination="4US-fZ-cyg" id="eQB-HR-Wgl"/>
@@ -196,10 +148,4 @@
             <point key="canvasLocation" x="137.6953125" y="201.953125"/>
         </tableViewCell>
     </objects>
-    <resources>
-        <image name="btn_menu_isomaps" width="151" height="151"/>
-        <image name="btn_menu_outdoors" width="151" height="151"/>
-        <image name="btn_menu_subway" width="151" height="151"/>
-        <image name="ic_clear_24" width="20" height="20"/>
-    </resources>
 </document>

@@ -5,6 +5,7 @@
 #include "indexer/feature_meta.hpp"
 #include "indexer/feature_utils.hpp"
 #include "indexer/map_object.hpp"
+#include "indexer/edit_journal.hpp"
 
 #include "coding/string_utf8_multilang.hpp"
 
@@ -47,38 +48,13 @@ struct LocalizedName
 };
 
 /// Class which contains vector of localized names with following priority:
-///  1. Names for Mwm languages
-///  2. User`s language name
-///  3. Other names
+///  1. Default Name
+///  2. Other names
 /// and mandatoryNamesCount - count of names which should be always shown.
 struct NamesDataSource
 {
   std::vector<LocalizedName> names;
   size_t mandatoryNamesCount = 0;
-};
-
-struct FakeName
-{
-  FakeName(int8_t code, std::string filledName)
-    : m_code(code)
-    , m_filledName(filledName)
-  {
-  }
-
-  int8_t m_code;
-  std::string m_filledName;
-};
-/// Contains information about fake names which were added for user convenience.
-struct FakeNames
-{
-  void Clear()
-  {
-    m_names.clear();
-    m_defaultName.clear();
-  }
-
-  std::vector<FakeName> m_names;
-  std::string m_defaultName;
 };
 
 struct LocalizedStreet
@@ -102,7 +78,7 @@ public:
   std::vector<MetadataID> GetEditableProperties() const;
 
   /// See comment for NamesDataSource class.
-  NamesDataSource GetNamesDataSource(bool addFakes = true);
+  NamesDataSource GetNamesDataSource();
   LocalizedStreet const & GetStreet() const;
   std::vector<LocalizedStreet> const & GetNearbyStreets() const;
 
@@ -142,13 +118,8 @@ public:
 
   /// Special mark that it's a point feature, not area or line.
   void SetPointType();
-  /// Enables advanced mode with direct access to default name and disables any recalculations.
-  void EnableNamesAdvancedMode() { m_namesAdvancedMode = true; }
-  bool IsNamesAdvancedModeEnabled() const { return m_namesAdvancedMode; }
-  /// Remove blank names and default name duplications.
-  void RemoveBlankAndDuplicationsForDefault();
-  /// Calls RemoveBlankNames or RemoveFakeNames depending on mode.
-  void RemoveNeedlessNames();
+  /// Remove blank names
+  void RemoveBlankNames();
 
   static bool ValidateBuildingLevels(std::string const & buildingLevels);
   static bool ValidateHouseNumber(std::string const & houseNumber);
@@ -159,6 +130,16 @@ public:
   static bool ValidateLevel(std::string const & level);
   static bool ValidateName(std::string const & name);
 
+  /// Journal that stores changes to map object
+  EditJournal const & GetJournal() const;
+  void SetJournal(EditJournal && editJournal);
+  EditingLifecycle GetEditingLifecycle() const;
+  void MarkAsCreated(uint32_t type, feature::GeomType geomType, m2::PointD mercator);
+  void ClearJournal();
+  void ApplyEditsFromJournal(EditJournal const & journal);
+  void ApplyJournalEntry(JournalEntry const & entry);
+  void LogDiffInJournal(EditableMapObject const & unedited_emo);
+
   /// Check whether langCode can be used as default name.
   static bool CanUseAsDefaultName(int8_t const langCode, std::vector<int8_t> const & nativeMwmLanguages);
 
@@ -166,8 +147,6 @@ public:
   static NamesDataSource GetNamesDataSource(StringUtf8Multilang const & source,
                                             std::vector<int8_t> const & nativeMwmLanguages,
                                             int8_t const userLanguage);
-  /// Removes fake names (which were added for user convenience) from name.
-  static void RemoveFakeNames(FakeNames const & fakeNames, StringUtf8Multilang & name);
 
   /// Compares editable fields connected with feature ignoring street.
   friend bool AreObjectsEqualIgnoringStreet(EditableMapObject const & lhs, EditableMapObject const & rhs);
@@ -176,7 +155,6 @@ private:
   LocalizedStreet m_street;
   std::vector<LocalizedStreet> m_nearbyStreets;
   EditableProperties m_editableProperties;
-  FakeNames m_fakeNames;
-  bool m_namesAdvancedMode = false;
+  osm::EditJournal m_journal;
 };
 }  // namespace osm

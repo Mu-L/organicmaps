@@ -29,7 +29,7 @@ jobs:
           version=$(tools/unix/version.sh ios_version)
           # +1 because below a "Bump versions" commit is created.
           # TODO: Find a way to refactor FDroid versioning without that additional commit.
-          build=$(($(tools/unix/version.sh ios_build) + 1))
+          build=$(($(tools/unix/version.sh count) + 1))
           code=$(($(tools/unix/version.sh android_code) + 1))
           tag=$version-$build-android
           echo "::set-output name=version::$version"
@@ -100,19 +100,26 @@ jobs:
           ref: master
           path: screenshots
 
-      - name: Checkout private keys
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ secrets.PRIVATE_REPO }}
-          ssh-key: ${{ secrets.PRIVATE_SSH_KEY }}
-          ref: master
-          path: private.git
-
-      - name: Configure repo with private keys
+      - name: Restore release keys
         shell: bash
         run: |
-          ./configure.sh ./private.git
-          rm -rf ./private.git
+          echo "$PRIVATE_H" | base64 -d > private.h
+          echo "$GOOGLE_PLAY_JSON" | base64 -d > android/app/google-play.json
+          echo "$HUAWEI_APPGALLERY_JSON" | base64 -d > android/app/huawei-appgallery.json
+          echo "$AGCONNECT_SERVICES_JSON" | base64 -d > android/app/agconnect-services.json
+          echo "$SECURE_PROPERTIES" | base64 -d > android/app/secure.properties
+          echo "$RELEASE_KEYSTORE" | base64 -d > android/app/release.keystore
+        env:
+          PRIVATE_H: ${{ secrets.PRIVATE_H }}
+          GOOGLE_PLAY_JSON: ${{ secrets.GOOGLE_PLAY_JSON }}
+          HUAWEI_APPGALLERY_JSON: ${{ secrets.HUAWEI_APPGALLERY_JSON }}
+          AGCONNECT_SERVICES_JSON: ${{ secrets.AGCONNECT_SERVICES_JSON }}
+          SECURE_PROPERTIES: ${{ secrets.SECURE_PROPERTIES }}
+          RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
+
+      - name: Configure repository
+        shell: bash
+        run: ./configure.sh
 
       - name: Set up SDK
         shell: bash
@@ -144,14 +151,16 @@ jobs:
         if: ${{ matrix.flavor == 'web' }}
         shell: bash
         run: |
+          (cd ./android/app/build/outputs/apk/web/release/ && sha256sum OrganicMaps-${{ needs.tag.outputs.code }}-web-release.apk > OrganicMaps-${{ needs.tag.outputs.code }}-web-release.apk.sha256sum)
           {
             cat ${{ env.RELEASE_NOTES }}
             echo ""
-            echo "See [more details](https://organicmaps.app/news/) on our website when apps are published."
+            echo "See [a detailed announce](https://organicmaps.app/news/) on our website when app updates are published in all stores."
+            echo "You can get automatic app updates from GitHub [using Obtainium](https://github.com/organicmaps/organicmaps/wiki/Installing-Organic-Maps-from-GitHub-using-Obtainium)."
             echo ""
             echo "sha256sum:"
             echo -e '\n```'
-            (cd ./android/app/build/outputs/apk/web/release/ && sha256sum OrganicMaps-${{ needs.tag.outputs.code }}-web-release.apk) | tr -d '\n'
+            tr -d '\n' < ./android/app/build/outputs/apk/web/release/OrganicMaps-${{ needs.tag.outputs.code }}-web-release.apk.sha256sum
             echo -e '\n```'
           } > ${{ runner.temp }}/release-notes.txt
 
@@ -164,5 +173,8 @@ jobs:
           name: ${{ needs.tag.outputs.tag }}
           tag_name: ${{ needs.tag.outputs.tag }}
           discussion_category_name: 'Announcements'
-          files: ./android/app/build/outputs/apk/web/release/OrganicMaps-${{ needs.tag.outputs.code }}-web-release.apk
+          prerelease: true
+          files: |
+            ./android/app/build/outputs/apk/web/release/OrganicMaps-${{ needs.tag.outputs.code }}-web-release.apk
+            ./android/app/build/outputs/apk/web/release/OrganicMaps-${{ needs.tag.outputs.code }}-web-release.apk.sha256sum
           fail_on_unmatched_files: true

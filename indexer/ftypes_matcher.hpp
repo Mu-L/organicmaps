@@ -6,12 +6,8 @@
 #include "base/small_map.hpp"
 #include "base/stl_helpers.hpp"
 
-#include <array>
 #include <functional>
-#include <limits>
-#include <optional>
 #include <string>
-#include <type_traits>
 #include <vector>
 
 #define DECLARE_CHECKER_INSTANCE(CheckerType) static CheckerType const & Instance() { \
@@ -56,22 +52,6 @@ public:
   DECLARE_CHECKER_INSTANCE(IsATMChecker);
 };
 
-class IsPaymentTerminalChecker : public BaseChecker
-{
-  IsPaymentTerminalChecker();
-
-public:
-  DECLARE_CHECKER_INSTANCE(IsPaymentTerminalChecker);
-};
-
-class IsMoneyExchangeChecker : public BaseChecker
-{
-  IsMoneyExchangeChecker();
-
-public:
-  DECLARE_CHECKER_INSTANCE(IsMoneyExchangeChecker);
-};
-
 class IsSpeedCamChecker : public BaseChecker
 {
   IsSpeedCamChecker();
@@ -87,51 +67,20 @@ public:
   DECLARE_CHECKER_INSTANCE(IsPostBoxChecker);
 };
 
-class IsPostOfficeChecker : public BaseChecker
+class IsPostPoiChecker : public BaseChecker
 {
-  IsPostOfficeChecker();
+  IsPostPoiChecker();
 
 public:
-  DECLARE_CHECKER_INSTANCE(IsPostOfficeChecker);
+  DECLARE_CHECKER_INSTANCE(IsPostPoiChecker);
 };
 
-class IsFuelStationChecker : public BaseChecker
+class IsOperatorOthersPoiChecker : public BaseChecker
 {
-  IsFuelStationChecker();
-public:
-  DECLARE_CHECKER_INSTANCE(IsFuelStationChecker);
-};
-
-class IsCarSharingChecker : public BaseChecker
-{
-  IsCarSharingChecker();
+  IsOperatorOthersPoiChecker();
 
 public:
-  DECLARE_CHECKER_INSTANCE(IsCarSharingChecker);
-};
-
-class IsCarRentalChecker : public BaseChecker
-{
-  IsCarRentalChecker();
-
-public:
-  DECLARE_CHECKER_INSTANCE(IsCarRentalChecker);
-};
-
-class IsBicycleRentalChecker : public BaseChecker
-{
-  IsBicycleRentalChecker();
-
-public:
-  DECLARE_CHECKER_INSTANCE(IsBicycleRentalChecker);
-};
-
-class IsParkingChecker : public BaseChecker
-{
-  IsParkingChecker();
-
-public:
-  DECLARE_CHECKER_INSTANCE(IsParkingChecker);
+  DECLARE_CHECKER_INSTANCE(IsOperatorOthersPoiChecker);
 };
 
 class IsRecyclingCentreChecker : public BaseChecker
@@ -192,6 +141,7 @@ enum class SuburbType
 {
   Residential = 0,
   Neighbourhood,
+  Quarter,
   Suburb,
   Count
 };
@@ -251,6 +201,13 @@ class IsAddressObjectChecker : public BaseChecker
   IsAddressObjectChecker();
 public:
   DECLARE_CHECKER_INSTANCE(IsAddressObjectChecker);
+};
+
+class IsAddressChecker : public BaseChecker
+{
+  IsAddressChecker();
+public:
+  DECLARE_CHECKER_INSTANCE(IsAddressChecker);
 };
 
 class IsVillageChecker : public BaseChecker
@@ -320,12 +277,46 @@ public:
   DECLARE_CHECKER_INSTANCE(IsPisteChecker);
 };
 
-/// @todo Should be merged/replaced with search::IsPoiChecker in model.cpp ?
-class IsPoiChecker : public BaseChecker
+
+class OneLevelPOIChecker : public ftypes::BaseChecker
 {
-  IsPoiChecker();
+public:
+  OneLevelPOIChecker();
+};
+
+/// Describes 2-level POI-exception types that don't belong to any POI-common classes
+/// (amenity, shop, tourism, ...). Used in search algo and search categories index generation.
+class TwoLevelPOIChecker : public ftypes::BaseChecker
+{
+public:
+  TwoLevelPOIChecker();
+};
+
+// Used in:
+// - search ranking (POIs are ranked somewhat higher than "unclassified" features, see search/model.hpp)
+// - add type's translation into complex PP subtitle (see GetLocalizedAllTypes())
+// - building lists of popular places (generator/popular_places_section_builder.cpp)
+class IsPoiChecker
+{
 public:
   DECLARE_CHECKER_INSTANCE(IsPoiChecker);
+
+  bool operator()(FeatureType & ft) const { return m_oneLevel(ft) || m_twoLevel(ft); }
+  template <class T> bool operator()(T const & t) const { return m_oneLevel(t) || m_twoLevel(t); }
+
+private:
+  OneLevelPOIChecker const m_oneLevel;
+  TwoLevelPOIChecker const m_twoLevel;
+};
+
+
+class IsAmenityChecker : public BaseChecker
+{
+  IsAmenityChecker();
+public:
+  DECLARE_CHECKER_INSTANCE(IsAmenityChecker);
+
+  uint32_t GetType() const { return m_types[0]; }
 };
 
 class AttractionsChecker : public BaseChecker
@@ -383,37 +374,9 @@ public:
 
 class IsHotelChecker : public BaseChecker
 {
-public:
-  enum class Type : uint8_t
-  {
-    Hotel,
-    Apartment,
-    CampSite,
-    Chalet,
-    GuestHouse,
-    Hostel,
-    Motel,
-    Resort,
-
-    Count
-  };
-
-  using UnderlyingType = std::underlying_type_t<Type>;
-
-  static_assert(base::Underlying(Type::Count) <= std::numeric_limits<UnderlyingType>::digits,
-                "Too many types of hotels");
-
-  static char const * GetHotelTypeTag(Type type);
-
-  unsigned GetHotelTypesMask(FeatureType & ft) const;
-
-  std::optional<Type> GetHotelType(FeatureType & ft) const;
-
-  DECLARE_CHECKER_INSTANCE(IsHotelChecker);
-private:
   IsHotelChecker();
-
-  std::array<std::pair<uint32_t, Type>, base::Underlying(Type::Count)> m_sortedTypes;
+public:
+  DECLARE_CHECKER_INSTANCE(IsHotelChecker);
 };
 
 // WiFi is a type in classificator.txt,
@@ -496,6 +459,13 @@ class IsPublicTransportStopChecker : public BaseChecker
   IsPublicTransportStopChecker();
 public:
   DECLARE_CHECKER_INSTANCE(IsPublicTransportStopChecker);
+};
+
+class IsTaxiChecker : public BaseChecker
+{
+  IsTaxiChecker();
+public:
+  DECLARE_CHECKER_INSTANCE(IsTaxiChecker);
 };
 
 class IsMotorwayJunctionChecker : public BaseChecker
@@ -620,7 +590,27 @@ class IsAddressInterpolChecker : public BaseChecker
 public:
   DECLARE_CHECKER_INSTANCE(IsAddressInterpolChecker);
 
-  feature::InterpolType GetInterpolType(FeatureType & ft) const;
+  template <class Range> feature::InterpolType GetInterpolType(Range const & range) const
+  {
+    for (uint32_t t : range)
+    {
+      if (t == m_odd)
+        return feature::InterpolType::Odd;
+      if (t == m_even)
+        return feature::InterpolType::Even;
+
+      ftype::TruncValue(t, 1);
+      if (t == m_types[0])
+        return feature::InterpolType::Any;
+    }
+
+    return feature::InterpolType::None;
+  }
+
+  feature::InterpolType GetInterpolType(FeatureType & ft) const
+  {
+    return GetInterpolType(feature::TypesHolder(ft));
+  }
 };
 
 
@@ -655,16 +645,3 @@ std::string DebugPrint(LocalityType const localityType);
 
 HighwayClass GetHighwayClass(feature::TypesHolder const & types);
 }  // namespace ftypes
-
-namespace std
-{
-template<>
-struct hash<ftypes::IsHotelChecker::Type>
-{
-  size_t operator()(ftypes::IsHotelChecker::Type type) const
-  {
-    using UnderlyingType = ftypes::IsHotelChecker::UnderlyingType;
-    return hash<UnderlyingType>()(static_cast<UnderlyingType>(type));
-  }
-};
-}  // namespace std

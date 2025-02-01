@@ -20,7 +20,7 @@ namespace
 {
 // See search/search_quality/scoring_model.py for details.  In short,
 // these coeffs correspond to coeffs in a linear model.
-double constexpr kHasName = 0.5;
+double constexpr kCategoriesHasName = 0.25;
 double constexpr kCategoriesPopularity = 0.05;
 double constexpr kCategoriesDistanceToPivot = -0.6874177;
 double constexpr kCategoriesRank = 1.0000000;
@@ -40,7 +40,7 @@ double constexpr kPopularity = 0.42;
 
 double constexpr kErrorsMade = -0.4;
 double constexpr kMatchedFraction = 0.1876736;
-double constexpr kAllTokensUsed = 0.0478513;
+double constexpr kAllTokensUsed = 0.3;
 double constexpr kCommonTokens = -0.05;
 double constexpr kAltOldName = -0.3;    // Some reasonable penalty like kErrorsMade.
 
@@ -50,6 +50,7 @@ double constexpr kAltOldName = -0.3;    // Some reasonable penalty like kErrorsM
 // - shoulbe be comparable with kRank to keep cities/towns
 double constexpr kViewportDiffThreshold = 0.29;
 static_assert(kViewportDiffThreshold < -kAltOldName && kViewportDiffThreshold > -kErrorsMade / 2);
+static_assert(kViewportDiffThreshold < kAllTokensUsed);
 
 double constexpr kNameScore[] = {
  -0.05,   // Zero
@@ -96,8 +97,7 @@ static_assert(std::size(kPoiType) == base::E2I(PoiType::Count));
 // - See NY_Subway test.
 double constexpr kFalseCats =
     kNameScore[base::E2I(NameScore::FULL_PREFIX)] - kNameScore[base::E2I(NameScore::FULL_MATCH)] +
-    kPoiType[base::E2I(PoiType::PureCategory)] - kPoiType[base::E2I(PoiType::Eat)]
-    + AbsPenaltyPerKm();   // a small 'plus diff' to keep fast food a little bit higher
+    kPoiType[base::E2I(PoiType::PureCategory)] - kPoiType[base::E2I(PoiType::Eat)];
 static_assert(kFalseCats < 0.0);
 
 double constexpr kStreetType[] = {
@@ -115,7 +115,7 @@ static_assert(std::size(kStreetType) == base::Underlying(StreetType::Count));
 static_assert(kType[Model::TYPE_BUILDING] > kStreetType[StreetType::Motorway]);
 
 // Coeffs sanity checks.
-static_assert(kHasName >= 0, "");
+static_assert(kCategoriesHasName >= 0 && kCategoriesHasName < kViewportDiffThreshold);
 static_assert(kCategoriesPopularity >= 0, "");
 static_assert(kDistanceToPivot <= 0, "");
 static_assert(kRank >= 0, "");
@@ -134,8 +134,8 @@ void PrintParse(ostringstream & oss, array<TokenRange, Model::TYPE_COUNT> const 
   {
     for (size_t pos : ranges[i])
     {
-      CHECK_LESS(pos, numTokens, ());
-      CHECK_EQUAL(types[pos], Model::TYPE_COUNT, ());
+      ASSERT_LESS(pos, numTokens, ());
+      ASSERT_EQUAL(types[pos], Model::TYPE_COUNT, ());
       types[pos] = static_cast<Model::Type>(i);
     }
   }
@@ -223,7 +223,6 @@ public:
       {"amenity", "police"},
       {"amenity", "post_office"},
       {"amenity", "stripclub"},
-      {"amenity", "taxi"},
       {"amenity", "theatre"},
     };
 
@@ -327,6 +326,7 @@ string DebugPrint(RankingInfo const & info)
      << ", m_allTokensUsed: " << info.m_allTokensUsed
      << ", m_categorialRequest: " << info.m_categorialRequest
      << ", m_hasName: " << info.m_hasName
+     << ", m_nearbyMatch: " << info.m_nearbyMatch
      << " }";
 
   return os.str();
@@ -417,8 +417,12 @@ double RankingInfo::GetLinearModelRank(bool viewportMode /* = false */) const
     if (m_falseCats)
       result += kCategoriesFalseCats;
     if (m_hasName)
-      result += kHasName;
+      result += kCategoriesHasName;
   }
+
+  // Trying to fix https://github.com/organicmaps/organicmaps/issues/5251.
+  if (m_nearbyMatch)
+    result += kAltOldName;
 
   return result;
 }
@@ -433,14 +437,22 @@ double RankingInfo::GetErrorsMadePerToken() const
   if (!m_errorsMade.IsValid())
     return GetMaxErrorsForTokenLength(numeric_limits<size_t>::max());
 
-  CHECK_GREATER(m_numTokens, 0, ());
+  ASSERT_GREATER(m_numTokens, 0, ());
   return m_errorsMade.m_errorsMade / static_cast<double>(m_numTokens);
 }
 
 NameScore RankingInfo::GetNameScore() const
 {
+  // See Pois_Rank test.
   if (!m_pureCats && Model::IsPoi(m_type) && m_classifType.poi <= PoiType::Attraction)
   {
+    // Promote POI's name rank if all tokens were matched with TYPE_SUBPOI/TYPE_COMPLEXPOI only.
+    for (int i = Model::TYPE_BUILDING; i < Model::TYPE_COUNT; ++i)
+    {
+      if (!m_tokenRanges[i].Empty())
+        return m_nameScore;
+    }
+
     // It's better for ranking when POIs would be equal by name score in the next cases:
 
     if (m_nameScore == NameScore::FULL_PREFIX)
@@ -472,7 +484,7 @@ Model::Type RankingInfo::GetTypeScore() const
 
 PoiType RankingInfo::GetPoiTypeScore() const
 {
-  // Equalize all *pure category* results to not distinguish different toilets (see NY_Subway, ToiletAirport test).
+  // Equalize all *pure category* results to not distinguish different toilets (see ToiletAirport test).
   return (m_pureCats ? PoiType::PureCategory : m_classifType.poi);
 }
 
@@ -491,7 +503,7 @@ PoiType GetPoiType(feature::TypesHolder const & th)
   {
     return PoiType::TransportMajor;
   }
-  if (IsPublicTransportStopChecker::Instance()(th))
+  if (IsPublicTransportStopChecker::Instance()(th) || IsTaxiChecker::Instance()(th))
     return PoiType::TransportLocal;
 
   static IsAttraction const attractionCheck;

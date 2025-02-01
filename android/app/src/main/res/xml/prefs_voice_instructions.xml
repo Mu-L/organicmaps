@@ -6,6 +6,11 @@
   <SwitchPreferenceCompat
       android:key="@string/pref_tts_enabled"
       android:title="@string/pref_tts_enable_title" />
+  <SwitchPreferenceCompat
+      android:key="@string/pref_tts_street_names"
+      android:title="@string/pref_tts_street_names_title"
+      android:summary="@string/pref_tts_street_names_description"
+      android:defaultValue="false" />
   <ListPreference
       android:key="@string/pref_tts_language"
       android:title="@string/pref_tts_language_title" />
@@ -15,6 +20,9 @@
   <Preference
       android:key="@string/pref_tts_test_voice"
       android:title="@string/pref_tts_test_voice_title" />
+  <Preference
+      android:key="@string/pref_tts_open_system_settings"
+      android:title="@string/pref_tts_open_system_settings" />
   <Preference
       android:enabled="false"
       android:key="@string/pref_tts_info"

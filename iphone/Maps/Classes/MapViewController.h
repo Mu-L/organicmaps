@@ -20,8 +20,12 @@
 
 - (void)updateStatusBarStyle;
 
+- (void)migrateOAuthCredentials;
+
 - (void)performAction:(NSString *_Nonnull)action;
 
+- (void)openMenu;
+- (void)openSettings;
 - (void)openMapsDownloader:(MWMMapDownloaderMode)mode;
 - (void)openEditor;
 - (void)openBookmarkEditor;

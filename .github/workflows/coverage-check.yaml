@@ -7,6 +7,23 @@ on:
       - synchronize
       - labeled
       - unlabeled
+    paths-ignore:
+      - .gitignore
+      - CONTRIBUTORS
+      - LICENSE
+      - NOTICE
+      - README.md
+      - docs/**
+      - packaging/**
+      - platform/*apple*
+      - platform/*_android*
+      - platform/*_ios*
+      - platform/*_mac*
+      - platform/*_win*
+      - pyhelpers/**
+      - tools/**
+      - '!tools/python/test_server/**'
+      - xcode/**
 
 # Cancels previous jobs if the same branch or PR was updated again.
 concurrency:
@@ -16,7 +33,7 @@ concurrency:
 jobs:
   should-run-check:
     name: Should run coverage
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       run-from-pr: ${{ steps.run-from-pr.outputs.run-from-pr }}
       manually-triggered: ${{ steps.manually-triggered.outputs.manually-triggered }}
@@ -42,7 +59,7 @@ jobs:
   coverage:
     needs: should-run-check
     name: Generate coverage report
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: ${{ needs.should-run-check.outputs.run-from-pr == 'true' || needs.should-run-check.outputs.manually-triggered == 'true'}}
     steps:
       - name: Free disk space by removing .NET, Android and Haskell
@@ -68,14 +85,16 @@ jobs:
               libgl1-mesa-dev \
               libglvnd-dev \
               qt6-base-dev \
+              libfreetype-dev \
+              libharfbuzz-dev \
               libqt6svg6-dev \
               qt6-positioning-dev \
               libqt6positioning6-plugins \
               libqt6positioning6 \
-              llvm
-          pip install gcovr
+              llvm \
+              gcovr
 
-      - name: Configure
+      - name: Configure repository
         shell: bash
         run: ./configure.sh
 
@@ -87,8 +106,8 @@ jobs:
       - name: CMake
         shell: bash
         env:
-          CC: clang-14
-          CXX: clang++-14
+          CC: clang-18
+          CXX: clang++-18
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         # -g1 should slightly reduce build time.
@@ -105,14 +124,14 @@ jobs:
         shell: bash
         working-directory: build
         env:
-          # drape_tests - requires X Window
+          QT_QPA_PLATFORM: "offscreen"
           # generator_integration_tests - https://github.com/organicmaps/organicmaps/issues/225
           # opening_hours_integration_tests - https://github.com/organicmaps/organicmaps/issues/219
           # opening_hours_supported_features_tests - https://github.com/organicmaps/organicmaps/issues/219
           # routing_integration_tests - https://github.com/organicmaps/organicmaps/issues/221
           # shaders_tests - https://github.com/organicmaps/organicmaps/issues/223
           # world_feed_integration_tests - https://github.com/organicmaps/organicmaps/issues/215
-          CTEST_EXCLUDE_REGEX: "drape_tests|generator_integration_tests|opening_hours_integration_tests|opening_hours_supported_features_tests|routing_benchmarks|routing_integration_tests|routing_quality_tests|search_quality_tests|storage_integration_tests|shaders_tests|world_feed_integration_tests"
+          CTEST_EXCLUDE_REGEX: "generator_integration_tests|opening_hours_integration_tests|opening_hours_supported_features_tests|routing_benchmarks|routing_integration_tests|routing_quality_tests|search_quality_tests|storage_integration_tests|shaders_tests|world_feed_integration_tests"
         run: |
           sudo locale-gen en_US
           sudo locale-gen en_US.UTF-8

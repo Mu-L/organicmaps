@@ -1,12 +1,20 @@
-• Dades de l’OpenStreetMap al 28 de febrer
-• Exportació de totes les adreces d’interès en un únic fitxer KMZ
-• Es permet canviar el color de la ruta
-• Pantalla «Quant a» redissenyada
-• Diverses fallades han estat corregides
-• S’ha actualitzat el color principal de l’aplicació
-• Els paràmetres «Mode nocturn» han canviat a «Aspecte»
-• Ja no es mostra «Opcions d’encaminament activades» quan s’usa el regle
-• Les pàgines dels llocs inclouen informació d’accessibilitat amb cadira de rodes
-• Les descripcions als resultats de la cerca tenen informació de reciclatge i elevació
+• New OpenStreetMap data as of January 21
+• Tap tracks to display statistics and an interactive elevation profile
+• A standalone Track Recording button
+• Track Recording Live Activity Widget with track statistics (iOS16.2 and later)
+• Added Serbian (Cyrillic) and Latvian languages
+• Added tower POIs
 
-… entre altres correccions i millores. Visiteu https://omaps.org/news per a assabentar-vos-en!
+• Added specific icons for Hong Kong, Shenzhen metro and Berlin light rail, a separate monorail icon
+• Added a context menu to the coordinates button in POI details
+• Show a reminder popup every time a full screen mode is entered
+• Display an explanation when the OSM Editor category search returns nothing
+• Differentiate between grass and grassland/meadow colors
+• Less saturated/prominent residential gardens color
+• Fixed yellow road shields displayed as green in the night mode
+• Display vegetation fills earlier in the car navigation style
+• Display complex non-number levels for building POIs
+• Improve search for peaks and saddles/passes
+• EN as additional search language in the OSM Editor
+• Update Estonian, Finnish, German, Italian, Turkish translations
+• ...many more bug fixes and UI improvements

@@ -7,10 +7,7 @@ import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 
-import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
@@ -20,6 +17,7 @@ import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 
 import app.organicmaps.background.OsmUploadWork;
+import app.organicmaps.downloader.Android7RootCertificateWorkaround;
 import app.organicmaps.downloader.DownloaderNotifier;
 import app.organicmaps.bookmarks.data.BookmarkManager;
 import app.organicmaps.display.DisplayManager;
@@ -28,6 +26,8 @@ import app.organicmaps.downloader.MapManager;
 import app.organicmaps.location.LocationHelper;
 import app.organicmaps.location.LocationState;
 import app.organicmaps.location.SensorHelper;
+import app.organicmaps.location.TrackRecorder;
+import app.organicmaps.location.TrackRecordingService;
 import app.organicmaps.maplayer.isolines.IsolinesManager;
 import app.organicmaps.maplayer.subway.SubwayManager;
 import app.organicmaps.maplayer.traffic.TrafficManager;
@@ -78,8 +78,6 @@ public class MwmApplication extends Application implements Application.ActivityL
   private volatile boolean mFrameworkInitialized;
   private volatile boolean mPlatformInitialized;
 
-  private Handler mMainLoopHandler;
-  private final Object mMainQueueToken = new Object();
   @NonNull
   private final MapManager.StorageCallback mStorageCallbacks = new StorageCallbackImpl();
 
@@ -142,6 +140,8 @@ public class MwmApplication extends Application implements Application.ActivityL
     Logger.i(TAG, "Initializing application");
     LogsManager.INSTANCE.initFileLogging(this);
 
+    Android7RootCertificateWorkaround.initializeIfNeeded(this);
+
     // Set configuration directory as early as possible.
     // Other methods may explicitly use Config, which requires settingsDir to be set.
     final String settingsPath = StorageUtils.getSettingsPath(this);
@@ -152,11 +152,11 @@ public class MwmApplication extends Application implements Application.ActivityL
 
     Config.init(this);
 
-    mMainLoopHandler = new Handler(getMainLooper());
     ConnectionState.INSTANCE.initialize(this);
 
     DownloaderNotifier.createNotificationChannel(this);
     NavigationService.createNotificationChannel(this);
+    TrackRecordingService.createNotificationChannel(this);
 
     registerActivityLifecycleCallbacks(this);
     mSubwayManager = new SubwayManager(this);
@@ -198,7 +198,8 @@ public class MwmApplication extends Application implements Application.ActivityL
     // external storage is damaged or not available (read-only).
     createPlatformDirectories(writablePath, privatePath, tempPath);
 
-    nativeInitPlatform(apkPath,
+    nativeInitPlatform(getApplicationContext(),
+                       apkPath,
                        writablePath,
                        privatePath,
                        tempPath,
@@ -256,7 +257,7 @@ public class MwmApplication extends Application implements Application.ActivityL
     nativeAddLocalization("core_my_position", getString(R.string.core_my_position));
     nativeAddLocalization("core_placepage_unknown_place", getString(R.string.core_placepage_unknown_place));
     nativeAddLocalization("postal_code", getString(R.string.postal_code));
-    nativeAddLocalization("wifi", getString(R.string.wifi));
+    nativeAddLocalization("wifi", getString(R.string.category_wifi));
   }
 
   public boolean arePlatformAndCoreInitialized()
@@ -269,22 +270,11 @@ public class MwmApplication extends Application implements Application.ActivityL
     System.loadLibrary("organicmaps");
   }
 
-  // Called from JNI.
-  @Keep
-  @SuppressWarnings("unused")
-  private void forwardToMainThread(final long taskPointer)
-  {
-    Message m = Message.obtain(mMainLoopHandler, () -> nativeProcessTask(taskPointer));
-    m.obj = mMainQueueToken;
-    mMainLoopHandler.sendMessage(m);
-  }
-
   private static native void nativeSetSettingsDir(String settingsPath);
-  private native void nativeInitPlatform(String apkPath, String writablePath, String privatePath,
-                                         String tmpPath, String flavorName, String buildType,
-                                         boolean isTablet);
+  private static native void nativeInitPlatform(Context context, String apkPath, String writablePath,
+                                                String privatePath, String tmpPath, String flavorName,
+                                                String buildType, boolean isTablet);
   private static native void nativeInitFramework(@NonNull Runnable onComplete);
-  private static native void nativeProcessTask(long taskPointer);
   private static native void nativeAddLocalization(String name, String value);
   private static native void nativeOnTransit(boolean foreground);
 
@@ -365,6 +355,8 @@ public class MwmApplication extends Application implements Application.ActivityL
       Logger.i(LOCATION_TAG, "Navigation is in progress, keeping location in the background");
     else if (!Map.isEngineCreated() || LocationState.getMode() == LocationState.PENDING_POSITION)
       Logger.i(LOCATION_TAG, "PENDING_POSITION mode, keeping location in the background");
+    else if (TrackRecorder.nativeIsTrackRecordingEnabled())
+      Logger.i(LOCATION_TAG, "Track Recordr is active, keeping location in the background");
     else
     {
       Logger.i(LOCATION_TAG, "Stopping location in the background");

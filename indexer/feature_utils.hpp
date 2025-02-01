@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "indexer/ftraits.hpp"
+#include "indexer/yes_no_unknown.hpp"
 
 struct FeatureID;
 class StringUtf8Multilang;
@@ -15,6 +16,7 @@ namespace feature
   static constexpr std::string_view kToiletsSymbol = "🚻";
   static constexpr std::string_view kAtmSymbol = "💳";
   static constexpr std::string_view kWheelchairSymbol = "♿️";
+  static constexpr std::string_view kWifiSymbol = "🛜";
 
   /// OSM internet_access tag values.
   enum class Internet
@@ -30,8 +32,10 @@ namespace feature
   /// @param[in]  inet  Should be lowercase like in DebugPrint.
   Internet InternetFromString(std::string_view inet);
 
+  YesNoUnknown YesNoUnknownFromString(std::string_view str);
+
   // Address house numbers interpolation.
-  enum class InterpolType { None, Odd, Even, Any };
+  enum class InterpolType : uint8_t { None, Odd, Even, Any };
 
   class TypesHolder;
   class RegionData;
@@ -153,7 +157,7 @@ namespace feature
 
   // Returns readable wheelchair type.
   std::string GetReadableWheelchairType(TypesHolder const & types);
-  
+
   /// @returns wheelchair availability.
   std::optional<ftraits::WheelchairAvailability> GetWheelchairType(TypesHolder const & types);
 

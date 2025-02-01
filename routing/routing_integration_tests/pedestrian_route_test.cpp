@@ -87,10 +87,11 @@ UNIT_TEST(Zgrad924aToKrukovo)
 
 UNIT_TEST(MoscowMailRuStarbucksToPetrovskoRazumovskyAlley)
 {
+  // Avoids footway gravel (-> path) and uses footway compacted.
   integration::CalculateRouteAndTestRouteLength(
       integration::GetVehicleComponents(VehicleType::Pedestrian),
       mercator::FromLatLon(55.7971, 37.5376), {0., 0.},
-      mercator::FromLatLon(55.7953, 37.5597), 1802.31);
+      mercator::FromLatLon(55.7953, 37.5597), 1849.6);
 }
 
 UNIT_TEST(AustraliaMelburn_AvoidMotorway)
@@ -106,7 +107,7 @@ UNIT_TEST(AustriaWein_AvoidTrunk)
   integration::CalculateRouteAndTestRouteLength(
       integration::GetVehicleComponents(VehicleType::Pedestrian),
       mercator::FromLatLon(48.233, 16.3562), {0., 0.},
-      mercator::FromLatLon(48.2458, 16.3704), 2301.);
+      mercator::FromLatLon(48.2458, 16.3704), 2172.23);
 }
 
 UNIT_TEST(FranceParis_AvoidBridleway)
@@ -122,7 +123,7 @@ UNIT_TEST(HungaryBudapest_AvoidMotorway)
   integration::CalculateRouteAndTestRouteLength(
       integration::GetVehicleComponents(VehicleType::Pedestrian),
       mercator::FromLatLon(47.56566, 19.14942), {0., 0.},
-      mercator::FromLatLon(47.593, 19.24018), 10579.2);
+      mercator::FromLatLon(47.593, 19.24018), 10179.6);
 }
 
 UNIT_TEST(PolandWarshaw_AvoidCycleway)
@@ -138,7 +139,7 @@ UNIT_TEST(SwedenStockholmSlussenHiltonToMaritimeMuseum)
   integration::CalculateRouteAndTestRouteLength(
       integration::GetVehicleComponents(VehicleType::Pedestrian),
       mercator::FromLatLon(59.32046, 18.06924), {0.0, 0.0},
-      mercator::FromLatLon(59.32751, 18.09092), 3518.05);
+      mercator::FromLatLon(59.32751, 18.09092), 3445.22);
 }
 
 UNIT_TEST(SwedenStockholmSlussenHiltonToAfChapmanHostel)
@@ -146,7 +147,7 @@ UNIT_TEST(SwedenStockholmSlussenHiltonToAfChapmanHostel)
   integration::CalculateRouteAndTestRouteLength(
       integration::GetVehicleComponents(VehicleType::Pedestrian),
       mercator::FromLatLon(59.32045, 18.06928), {0., 0.},
-      mercator::FromLatLon(59.3254, 18.08022), 2249.98);
+      mercator::FromLatLon(59.3254, 18.08022), 2170.87);
 }
 
 UNIT_TEST(EstoniaTallinnRadissonHiltonToCatherdalChurch)
@@ -154,7 +155,7 @@ UNIT_TEST(EstoniaTallinnRadissonHiltonToCatherdalChurch)
   integration::CalculateRouteAndTestRouteLength(
       integration::GetVehicleComponents(VehicleType::Pedestrian),
       mercator::FromLatLon(59.4362, 24.7682), {0., 0.},
-      mercator::FromLatLon(59.437, 24.7392), 2016.);
+      mercator::FromLatLon(59.437, 24.7392), 1972.54);
 }
 
 UNIT_TEST(EstoniaTallinnRadissonHiltonToSkypeOffice)
@@ -270,12 +271,14 @@ UNIT_TEST(CzechPragueNode5ToHilton)
       mercator::FromLatLon(50.0933, 14.4397), 5106.);
 }
 
+/// @todo Here maybe some +-100m differencies. OM workd like OSRM here.
+/// @{
 UNIT_TEST(CzechPragueHiltonToKarlovMost)
 {
   integration::CalculateRouteAndTestRouteLength(
       integration::GetVehicleComponents(VehicleType::Pedestrian),
       mercator::FromLatLon(50.0933, 14.4397), {0., 0.},
-      mercator::FromLatLon(50.0864, 14.4124), 2410.07);
+      mercator::FromLatLon(50.0864, 14.4124), 2483);
 }
 
 UNIT_TEST(CzechPragueHiltonToNicholasChurch)
@@ -283,8 +286,9 @@ UNIT_TEST(CzechPragueHiltonToNicholasChurch)
   integration::CalculateRouteAndTestRouteLength(
       integration::GetVehicleComponents(VehicleType::Pedestrian),
       mercator::FromLatLon(50.0933, 14.4397), {0., 0.},
-      mercator::FromLatLon(50.088, 14.4032), 3103.);
+      mercator::FromLatLon(50.088, 14.4032), 3196);
 }
+/// @}
 
 UNIT_TEST(CzechPragueHiltonToKvetniceViewpoint)
 {
@@ -675,9 +679,7 @@ UNIT_TEST(Romania_Mountains_ETA)
   TEST(routeResult.first, ());
   Route const & route = *routeResult.first;
 
-  // Google agrees here and also makes a detour with less ascent/descent.
-  // GraphHopper, OSRM make a shorter route via the mountain.
-  TestRouteLength(route, 5766.87);
+  TestRouteLength(route, 4712.19);
   route.GetTotalTimeSec();
   TEST_LESS(route.GetTotalTimeSec(), 2.5 * 3600, ());
 }

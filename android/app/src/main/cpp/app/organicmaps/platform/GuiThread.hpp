@@ -9,7 +9,7 @@ namespace android
 class GuiThread : public base::TaskLoop
 {
 public:
-  explicit GuiThread(jobject processObject);
+  GuiThread();
   ~GuiThread() override;
 
   static void ProcessTask(jlong task);
@@ -19,7 +19,7 @@ public:
   PushResult Push(Task const & task) override;
 
 private:
-  jobject m_object = nullptr;
+  jclass m_class = nullptr;
   jmethodID m_method = nullptr;
 };
 }  // namespace android

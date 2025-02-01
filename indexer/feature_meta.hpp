@@ -150,6 +150,11 @@ public:
     FMD_CAPACITY = 42,
     FMD_WHEELCHAIR = 43, // Value is runtime only, data is taken from the classificator types
     FMD_LOCAL_REF = 44,
+    FMD_DRIVE_THROUGH = 45,
+    FMD_WEBSITE_MENU = 46,
+    FMD_SELF_SERVICE = 47,
+    FMD_OUTDOOR_SEATING = 48,
+    FMD_NETWORK = 49,
     FMD_COUNT
   };
 

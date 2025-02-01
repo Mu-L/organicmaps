@@ -64,7 +64,14 @@
         android:clickable="true"
         android:focusable="true"
         android:background="?cardBackground">
-        <include layout="@layout/recycler_with_fab"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+          android:id="@+id/recycler"
+          android:clipToPadding="false"
+          android:background="?cardBackground"
+          android:layout_width="match_parent"
+          android:layout_height="match_parent"
+          />
 
         <app.organicmaps.widget.PlaceholderView
           android:id="@+id/placeholder"
@@ -87,9 +94,9 @@
 
     <include
       layout="@layout/show_on_map_fab"
-      android:layout_width="match_parent"
+      android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      android:layout_gravity="bottom|end"
+      android:layout_gravity="bottom|center"
       android:layout_margin="@dimen/margin_base"/>
 
 

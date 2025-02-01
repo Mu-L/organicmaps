@@ -89,8 +89,32 @@ constexpr bool IsSupportedLangCode(int8_t langCode)
 }
 }  // namespace
 
+bool StringUtf8Multilang::IsServiceLang(std::string_view lang)
+{
+  return lang == kLanguages[kDefaultCode].m_code
+      || lang == kLanguages[kInternationalCode].m_code
+      || lang == kLanguages[kAltNameCode].m_code
+      || lang == kLanguages[kOldNameCode].m_code;
+}
 // static
-StringUtf8Multilang::Languages const & StringUtf8Multilang::GetSupportedLanguages()
+static const StringUtf8Multilang::Languages allLanguages = []()
+{
+  StringUtf8Multilang::Languages langs;
+  std::copy_if(kLanguages.cbegin(), kLanguages.cend(), std::back_inserter(langs),
+               [](StringUtf8Multilang::Lang const & lang) { return lang.m_code != StringUtf8Multilang::kReservedLang; });
+  return langs;
+}();
+
+static const StringUtf8Multilang::Languages languagesWithoutService = []()
+{
+  StringUtf8Multilang::Languages langs;
+  std::copy_if(allLanguages.cbegin(), allLanguages.cend(), std::back_inserter(langs),
+               [](StringUtf8Multilang::Lang const & lang) { return !StringUtf8Multilang::IsServiceLang(lang.m_code); });
+  return langs;
+}();
+
+
+StringUtf8Multilang::Languages const & StringUtf8Multilang::GetSupportedLanguages(bool includeServiceLangs)
 {
   // Asserts for generic class constants.
   ASSERT_EQUAL(kLanguages[kDefaultCode].m_code, std::string_view{"default"}, ());
@@ -98,14 +122,8 @@ StringUtf8Multilang::Languages const & StringUtf8Multilang::GetSupportedLanguage
   ASSERT_EQUAL(kLanguages[kAltNameCode].m_code, std::string_view{"alt_name"}, ());
   ASSERT_EQUAL(kLanguages[kOldNameCode].m_code, std::string_view{"old_name"}, ());
   ASSERT_EQUAL(kLanguages[kEnglishCode].m_code, std::string_view{"en"}, ());
-  static StringUtf8Multilang::Languages languages;
-  if (languages.empty())
-  {
-    std::copy_if(kLanguages.cbegin(), kLanguages.cend(), std::back_inserter(languages),
-            [](Lang const & lang) { return lang.m_code != kReservedLang; });
-  }
 
-  return languages;
+  return includeServiceLangs ? allLanguages : languagesWithoutService;
 }
 
 // static
@@ -147,6 +165,35 @@ std::vector<std::string_view> const * StringUtf8Multilang::GetTransliteratorsIds
     return nullptr;
 
   return &kLanguages[langCode].m_transliteratorsIds;
+}
+
+std::string StringUtf8Multilang::GetOSMTagByCode(uint8_t const langCode)
+{
+  std::string_view lang = StringUtf8Multilang::GetLangByCode(langCode);
+  if (lang == "int_name" || lang == "alt_name" || lang == "old_name")
+    return std::string{lang};
+  else if (lang == "default")
+    return "name";
+  else if (!lang.empty())
+    return std::string{"name:"}.append(lang);
+  else
+  {
+    ASSERT_FAIL(("Language can not be an empty string"));
+    return "";
+  }
+}
+
+uint8_t StringUtf8Multilang::GetCodeByOSMTag(std::string const & name)
+{
+  std::string lang;
+  if (name.starts_with("name:"))
+    lang = name.substr(5);
+  else if (name == "name")
+    lang = "default";
+  else
+    lang = name;
+
+  return StringUtf8Multilang::GetLangIndex(lang);
 }
 
 size_t StringUtf8Multilang::GetNextIndex(size_t i) const

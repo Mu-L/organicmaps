@@ -154,7 +154,8 @@ void UserEventStream::AddEvent(drape_ptr<UserEvent> && event)
   m_events.emplace_back(std::move(event));
 }
 
-ScreenBase const & UserEventStream::ProcessEvents(bool & modelViewChanged, bool & viewportChanged)
+ScreenBase const & UserEventStream::ProcessEvents(bool & modelViewChanged, bool & viewportChanged, 
+                                                  bool & activeFrame)
 {
   TEventsList events;
   {
@@ -164,6 +165,7 @@ ScreenBase const & UserEventStream::ProcessEvents(bool & modelViewChanged, bool 
 
   m2::RectD const prevPixelRect = GetCurrentScreen().PixelRect();
 
+  activeFrame = false;
   viewportChanged = false;
   m_modelViewChanged = !events.empty() || m_state == STATE_SCALE || m_state == STATE_DRAG;
 
@@ -268,7 +270,11 @@ ScreenBase const & UserEventStream::ProcessEvents(bool & modelViewChanged, bool 
         TouchCancel(m_touches);
       }
       break;
-
+    case UserEvent::EventType::ActiveFrame:
+      {
+        activeFrame = true;
+      }
+      break;
     default:
       ASSERT(false, ());
       break;
@@ -731,17 +737,6 @@ m2::AnyRectD UserEventStream::GetTargetRect()
   return targetScreen.GlobalRect();
 }
 
-void UserEventStream::CheckAutoRotate()
-{
-  if (GetCurrentScreen().isPerspective())
-    return;
-
-  double const kMaxAutoRotateAngle = 25.0 * math::pi / 180.0;
-  double const angle = fabs(GetCurrentScreen().GetAngle());
-  if (angle < kMaxAutoRotateAngle || (2.0 * math::pi - angle) < kMaxAutoRotateAngle)
-    SetAngle(0.0, true /* isAnim */);
-}
-
 bool UserEventStream::ProcessTouch(TouchEvent const & touch)
 {
   ASSERT(touch.GetFirstTouch().m_id != -1, ());
@@ -1081,8 +1076,6 @@ bool UserEventStream::EndDrag(Touch const & t, bool cancelled)
   m_startDragOrg = m2::PointD::Zero();
   m_navigator.StopDrag(m2::PointD(t.m_location));
 
-  CheckAutoRotate();
-
   if (!cancelled && m_kineticScrollEnabled && m_scroller.IsActive() &&
       m_kineticTimer.ElapsedMilliseconds() >= kKineticDelayMs)
   {
@@ -1157,7 +1150,6 @@ void UserEventStream::EndScale(const Touch & t1, const Touch & t2)
   m_navigator.StopScale(touch1, touch2);
 
   m_kineticTimer.Reset();
-  CheckAutoRotate();
 }
 
 void UserEventStream::BeginTapDetector()

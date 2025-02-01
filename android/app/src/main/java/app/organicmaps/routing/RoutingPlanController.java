@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.CompoundButton;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
@@ -12,16 +11,17 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import app.organicmaps.Framework;
 import app.organicmaps.MwmApplication;
 import app.organicmaps.R;
 import app.organicmaps.settings.DrivingOptionsActivity;
+import app.organicmaps.util.UiUtils;
+import app.organicmaps.util.WindowInsetUtils.PaddingInsetsListener;
 import app.organicmaps.widget.RoutingToolbarButton;
 import app.organicmaps.widget.ToolbarController;
 import app.organicmaps.widget.WheelProgressView;
-import app.organicmaps.util.UiUtils;
 
 public class RoutingPlanController extends ToolbarController
 {
@@ -60,7 +60,7 @@ public class RoutingPlanController extends ToolbarController
   @NonNull
   private final View mDrivingOptionsImage;
 
-  private RadioButton setupRouterButton(@IdRes int buttonId, final @DrawableRes int iconRes, View.OnClickListener clickListener)
+  private void setupRouterButton(@IdRes int buttonId, final @DrawableRes int iconRes, View.OnClickListener clickListener)
   {
     CompoundButton.OnCheckedChangeListener listener = (buttonView, isChecked) -> {
       RoutingToolbarButton button = (RoutingToolbarButton) buttonView;
@@ -75,7 +75,6 @@ public class RoutingPlanController extends ToolbarController
     listener.onCheckedChanged(rb, false);
     rb.setOnCheckedChangeListener(listener);
     rb.setOnClickListener(clickListener);
-    return rb;
   }
 
   RoutingPlanController(View root, Activity activity,
@@ -109,10 +108,12 @@ public class RoutingPlanController extends ToolbarController
     mAnimToggle = MwmApplication.from(activity.getApplicationContext())
                                 .getResources().getInteger(R.integer.anim_default);
 
-    ViewCompat.setOnApplyWindowInsetsListener(mFrame, (view, windowInsets) -> {
-      UiUtils.setViewInsetsPaddingNoTop(activity.findViewById(R.id.menu_frame), windowInsets);
-      return windowInsets;
-    });
+    final View menuFrame = activity.findViewById(R.id.menu_frame);
+    final PaddingInsetsListener insetsListener = new PaddingInsetsListener.Builder()
+        .setInsetsTypeMask(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout())
+        .setExcludeTop()
+        .build();
+    ViewCompat.setOnApplyWindowInsetsListener(menuFrame, insetsListener);
   }
 
   @NonNull
@@ -331,12 +332,6 @@ public class RoutingPlanController extends ToolbarController
                               : driverOptionsView.getHeight();
 
     return frameHeight - extraOppositeOffset;
-  }
-
-  @Override
-  protected boolean useExtendedToolbar()
-  {
-    return true;
   }
 
   private class SelfTerminatedDrivingOptionsLayoutListener implements View.OnLayoutChangeListener

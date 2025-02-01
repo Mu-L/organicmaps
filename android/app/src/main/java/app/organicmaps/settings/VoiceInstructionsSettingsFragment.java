@@ -1,5 +1,6 @@
 package app.organicmaps.settings;
 
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
@@ -8,6 +9,7 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
 import android.view.View;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -46,6 +48,12 @@ public class VoiceInstructionsSettingsFragment extends BaseXmlSettingsFragment
   private SeekBarPreference mTtsVolume;
   @NonNull
   @SuppressWarnings("NotNullFieldNotInitialized")
+  private TwoStatePreference mTtsPrefStreetNames;
+  @NonNull
+  @SuppressWarnings("NotNullFieldNotInitialized")
+  private ListPreference mPrefLanguages;
+  @NonNull
+  @SuppressWarnings("NotNullFieldNotInitialized")
   private Preference mTtsLangInfo;
   @NonNull
   @SuppressWarnings("NotNullFieldNotInitialized")
@@ -64,16 +72,19 @@ public class VoiceInstructionsSettingsFragment extends BaseXmlSettingsFragment
     if (!set)
     {
       TtsPlayer.setEnabled(false);
-      mTtsPrefLanguages.setEnabled(false);
-      mTtsVolume.setEnabled(false);
+      mTtsPrefLanguages.setVisible(false);
+      mTtsPrefStreetNames.setVisible(false);
+      mTtsVolume.setVisible(false);
       mTtsLangInfo.setSummary(R.string.prefs_languages_information_off);
-      mTtsVoiceTest.setEnabled(false);
+      mTtsVoiceTest.setVisible(false);
       return true;
     }
 
     mTtsLangInfo.setSummary(R.string.prefs_languages_information);
-    mTtsVolume.setEnabled(true);
-    mTtsVoiceTest.setEnabled(true);
+    mTtsPrefLanguages.setVisible(true);
+    mTtsPrefStreetNames.setVisible(true);
+    mTtsVolume.setVisible(true);
+    mTtsVoiceTest.setVisible(true);
 
     if (mCurrentLanguage != null && mCurrentLanguage.downloaded)
     {
@@ -102,6 +113,13 @@ public class VoiceInstructionsSettingsFragment extends BaseXmlSettingsFragment
     return false;
   };
 
+  private final Preference.OnPreferenceChangeListener mStreetNameListener = (preference, newValue) -> {
+    boolean set = (Boolean) newValue;
+    Config.TTS.setAnnounceStreets(set);
+
+    return true;
+  };
+
   @Override
   protected int getXmlResources()
   {
@@ -115,7 +133,27 @@ public class VoiceInstructionsSettingsFragment extends BaseXmlSettingsFragment
 
     mTtsPrefEnabled = getPreference(getString(R.string.pref_tts_enabled));
     mTtsPrefLanguages = getPreference(getString(R.string.pref_tts_language));
+    mTtsPrefStreetNames = findPreference(getString(R.string.pref_tts_street_names));
     mTtsLangInfo = getPreference(getString(R.string.pref_tts_info));
+
+    Preference mTtsOpenSystemSettings = getPreference(getString(R.string.pref_tts_open_system_settings));
+    mTtsOpenSystemSettings.setOnPreferenceClickListener(pref -> {
+      try
+      {
+        final Intent intent = new Intent()
+                .setAction("com.android.settings.TTS_SETTINGS")
+                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        return true;
+      }
+      catch(ActivityNotFoundException e)
+      {
+        CharSequence noTtsSettingString = getString(R.string.pref_tts_no_system_tts);
+        Toast.makeText(super.getSettingsActivity(), noTtsSettingString, Toast.LENGTH_LONG).show();
+        return false;
+      }
+    });
+
     mTtsVoiceTest = getPreference(getString(R.string.pref_tts_test_voice));
     mTtsVoiceTest.setOnPreferenceClickListener(pref -> {
       if (mTtsTestStringArray == null)
@@ -164,6 +202,7 @@ public class VoiceInstructionsSettingsFragment extends BaseXmlSettingsFragment
   {
     mTtsPrefEnabled.setOnPreferenceChangeListener(enable ? mEnabledListener : null);
     mTtsPrefLanguages.setOnPreferenceChangeListener(enable ? mLangListener : null);
+    mTtsPrefStreetNames.setOnPreferenceChangeListener(enable ? mStreetNameListener : null);
   }
 
   private void setLanguage(@NonNull LanguageData lang)
@@ -189,10 +228,11 @@ public class VoiceInstructionsSettingsFragment extends BaseXmlSettingsFragment
       mTtsPrefEnabled.setChecked(false);
       mTtsPrefEnabled.setEnabled(false);
       mTtsPrefEnabled.setSummary(R.string.pref_tts_unavailable);
-      mTtsPrefLanguages.setEnabled(false);
+      mTtsPrefStreetNames.setVisible(false);
+      mTtsPrefLanguages.setVisible(false);
       mTtsPrefLanguages.setSummary(null);
-      mTtsVolume.setEnabled(false);
-      mTtsVoiceTest.setEnabled(false);
+      mTtsVolume.setVisible(false);
+      mTtsVoiceTest.setVisible(false);
       mTtsLangInfo.setSummary(R.string.prefs_languages_information_off);
 
       enableListeners(true);
@@ -220,11 +260,12 @@ public class VoiceInstructionsSettingsFragment extends BaseXmlSettingsFragment
     mCurrentLanguage = TtsPlayer.getSelectedLanguage(languages);
     final boolean available = (mCurrentLanguage != null && mCurrentLanguage.downloaded);
     mTtsPrefEnabled.setChecked(available && TtsPlayer.isEnabled());
-    mTtsPrefLanguages.setEnabled(available && TtsPlayer.isEnabled());
+    mTtsPrefLanguages.setVisible(available && TtsPlayer.isEnabled());
     mTtsPrefLanguages.setSummary(available ? mCurrentLanguage.name : null);
     mTtsPrefLanguages.setValue(available ? mCurrentLanguage.internalCode : null);
-    mTtsVolume.setEnabled(enabled && available && TtsPlayer.isEnabled());
-    mTtsVoiceTest.setEnabled(enabled && available && TtsPlayer.isEnabled());
+    mTtsPrefStreetNames.setVisible(enabled && available && TtsPlayer.isEnabled());
+    mTtsVolume.setVisible(enabled && available && TtsPlayer.isEnabled());
+    mTtsVoiceTest.setVisible(enabled && available && TtsPlayer.isEnabled());
 
     if (available)
     {

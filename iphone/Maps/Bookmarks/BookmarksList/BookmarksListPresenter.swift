@@ -5,12 +5,9 @@ protocol BookmarksListDelegate: AnyObject {
 final class BookmarksListPresenter {
   private unowned let view: IBookmarksListView
   private let router: IBookmarksListRouter
-  private let interactor: IBookmarksListInteractor
+  private var interactor: IBookmarksListInteractor
   private weak var delegate: BookmarksListDelegate?
-
-  private let distanceFormatter = MeasurementFormatter()
-  private let imperialUnits: Bool
-  private let bookmarkGroup: BookmarkGroup
+  private var bookmarkGroup: BookmarkGroup
 
   private enum EditableItem {
     case bookmark(MWMMarkID)
@@ -21,16 +18,26 @@ final class BookmarksListPresenter {
   init(view: IBookmarksListView,
        router: IBookmarksListRouter,
        delegate: BookmarksListDelegate?,
-       interactor: IBookmarksListInteractor,
-       imperialUnits: Bool) {
+       interactor: IBookmarksListInteractor) {
     self.view = view
     self.router = router
     self.delegate = delegate
     self.interactor = interactor
-    self.imperialUnits = imperialUnits
+    self.bookmarkGroup = interactor.getBookmarkGroup()
+    self.subscribeOnGroupReloading()
+  }
 
-    bookmarkGroup = interactor.getBookmarkGroup()
-    distanceFormatter.unitOptions = [.providedUnit]
+  private func subscribeOnGroupReloading() {
+    interactor.onCategoryReload = { [weak self] result in
+      guard let self else { return }
+      switch result {
+      case .notFound:
+        self.router.goBack()
+      case .success:
+        self.bookmarkGroup = self.interactor.getBookmarkGroup()
+        self.reload()
+      }
+    }
   }
 
   private func reload() {
@@ -95,10 +102,7 @@ final class BookmarksListPresenter {
   }
 
   private func formatDistance(_ distance: Double) -> String {
-    let unit = imperialUnits ? UnitLength.miles : UnitLength.kilometers
-    let distanceInUnits = unit.converter.value(fromBaseUnitValue: distance)
-    let measurement = Measurement(value: distanceInUnits.rounded(), unit: unit)
-    return distanceFormatter.string(from: measurement)
+    DistanceFormatter.distanceString(fromMeters: distance)
   }
 
   private func showSortMenu() {
@@ -117,12 +121,16 @@ final class BookmarksListPresenter {
           return BookmarksListMenuItem(title: L("sort_type"), action: { [weak self] in
             self?.sort(.type)
           })
+        case .name:
+          return BookmarksListMenuItem(title: L("sort_name"), action: { [weak self] in
+            self?.sort(.name)
+          })
         }
     }
     sortItems.append(BookmarksListMenuItem(title: L("sort_default"), action: { [weak self] in
       self?.setDefaultSections()
     }))
-    view.showMenu(sortItems)
+    view.showMenu(sortItems, from: .sort)
   }
 
   private func showMoreMenu() {
@@ -134,23 +142,37 @@ final class BookmarksListPresenter {
       guard let self = self else { return }
       self.router.listSettings(self.bookmarkGroup, delegate: self)
     }))
-    moreItems.append(BookmarksListMenuItem(title: L("export_file"), action: { [weak self] in
-      self?.interactor.exportFile { (url, status) in
-        switch status {
-        case .success:
-          guard let url = url else { fatalError() }
-          self?.view.share(url) {
-            self?.interactor.finishExportFile()
-          }
-        case .empty:
-          self?.view.showError(title: L("bookmarks_error_title_share_empty"),
-                               message: L("bookmarks_error_message_share_empty"))
-        case .error:
-          self?.view.showError(title: L("dialog_routing_system_error"),
-                               message: L("bookmarks_error_message_share_general"))
-        }
+
+    func exportMenuItem(for fileType: KmlFileType) -> BookmarksListMenuItem {
+      let title: String
+      switch fileType {
+      case .text:
+        title = L("export_file")
+      case .gpx:
+        title = L("export_file_gpx")
+      default:
+        fatalError("Unexpected file type")
       }
-    }))
+      return BookmarksListMenuItem(title: title, action: { [weak self] in
+        self?.interactor.exportFile(fileType: fileType) { (status, url) in
+          switch status {
+          case .success:
+            guard let url = url else { fatalError() }
+            self?.view.share(url) {
+              self?.interactor.finishExportFile()
+            }
+          case .emptyCategory:
+            self?.view.showError(title: L("bookmarks_error_title_share_empty"),
+                                 message: L("bookmarks_error_message_share_empty"))
+          case .archiveError, .fileError:
+            self?.view.showError(title: L("dialog_routing_system_error"),
+                                 message: L("bookmarks_error_message_share_general"))
+          }
+        }
+      })
+    }
+    moreItems.append(exportMenuItem(for: .text))
+    moreItems.append(exportMenuItem(for: .gpx))
     moreItems.append(BookmarksListMenuItem(title: L("delete_list"),
                                            destructive: true,
                                            enabled: interactor.canDeleteGroup(),
@@ -158,7 +180,7 @@ final class BookmarksListPresenter {
                                             self?.interactor.deleteBookmarksGroup()
                                             self?.delegate?.bookmarksListDidDeleteGroup()
                                            }))
-    view.showMenu(moreItems)
+    view.showMenu(moreItems, from: .more)
   }
 
   private func viewOnMap() {
@@ -419,9 +441,9 @@ extension ISubgroupsSectionViewModel {
   var canEdit: Bool { false }
 }
 
-fileprivate struct BookmarkViewModel: IBookmarkViewModel {
+fileprivate struct BookmarkViewModel: IBookmarksListItemViewModel {
   let bookmarkId: MWMMarkID
-  let bookmarkName: String
+  let name: String
   let subtitle: String
   var image: UIImage {
     bookmarkColor.image(bookmarkIconName)
@@ -433,7 +455,7 @@ fileprivate struct BookmarkViewModel: IBookmarkViewModel {
 
   init(_ bookmark: Bookmark, formattedDistance: String?, colorDidTap: (() -> Void)?) {
     bookmarkId = bookmark.bookmarkId
-    bookmarkName = bookmark.bookmarkName
+    name = bookmark.bookmarkName
     bookmarkColor = bookmark.bookmarkColor
     bookmarkIconName = bookmark.bookmarkIconName
     subtitle = [formattedDistance, bookmark.bookmarkType].compactMap { $0 }.joined(separator: " • ")
@@ -441,9 +463,9 @@ fileprivate struct BookmarkViewModel: IBookmarkViewModel {
   }
 }
 
-fileprivate struct TrackViewModel: ITrackViewModel {
+fileprivate struct TrackViewModel: IBookmarksListItemViewModel {
   let trackId: MWMTrackID
-  let trackName: String
+  let name: String
   let subtitle: String
   var image: UIImage {
     circleImageForColor(trackColor, frameSize: 22)
@@ -454,7 +476,7 @@ fileprivate struct TrackViewModel: ITrackViewModel {
 
   init(_ track: Track, formattedDistance: String, colorDidTap: (() -> Void)?) {
     trackId = track.trackId
-    trackName = track.trackName
+    name = track.trackName
     subtitle = "\(L("length")) \(formattedDistance)"
     trackColor = track.trackColor
     colorDidTapAction = colorDidTap
@@ -479,18 +501,18 @@ fileprivate struct SubgroupViewModel: ISubgroupViewModel {
 
 fileprivate struct BookmarksSectionViewModel: IBookmarksSectionViewModel {
   let sectionTitle: String
-  let bookmarks: [IBookmarkViewModel]
+  let bookmarks: [IBookmarksListItemViewModel]
 
-  init(title: String, bookmarks: [IBookmarkViewModel]) {
+  init(title: String, bookmarks: [IBookmarksListItemViewModel]) {
     sectionTitle = title
     self.bookmarks = bookmarks
   }
 }
 
 fileprivate struct TracksSectionViewModel: ITracksSectionViewModel {
-  let tracks: [ITrackViewModel]
+  let tracks: [IBookmarksListItemViewModel]
 
-  init(tracks: [ITrackViewModel]) {
+  init(tracks: [IBookmarksListItemViewModel]) {
     self.tracks = tracks
   }
 }

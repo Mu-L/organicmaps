@@ -36,7 +36,7 @@ final class OSMView: UIView {
   private func setupViews() {
     OSMImageView.image = UIImage(named: "osm_logo")
 
-    OSMTextLabel.styleName = "regular14:blackPrimaryText"
+    OSMTextLabel.setFontStyle(.regular14, color: .blackPrimary)
     OSMTextLabel.lineBreakMode = .byWordWrapping
     OSMTextLabel.numberOfLines = 0
     OSMTextLabel.isUserInteractionEnabled = true
@@ -77,7 +77,7 @@ final class OSMView: UIView {
     let osmLink = "OpenStreetMap.org"
     let attributedString = NSMutableAttributedString(string: String(format: L("osm_presentation"), date.trimmingCharacters(in: .punctuationCharacters)),
                                                      attributes: [.font: UIFont.regular14(),
-                                                                  .foregroundColor: StyleManager.shared.theme?.colors.blackPrimaryText]
+                                                                  .foregroundColor: StyleManager.shared.theme!.colors.blackPrimaryText]
     )
     let linkRange = attributedString.mutableString.range(of: osmLink)
     attributedString.addAttribute(.link, value: "https://www.openstreetmap.org/", range: linkRange)

@@ -6,7 +6,6 @@
 #include "drape_frontend/visual_params.hpp"
 
 #include "drape/drape_routine.hpp"
-#include "drape/glyph_generator.hpp"
 #include "drape/support_manager.hpp"
 
 #include "platform/settings.hpp"
@@ -19,8 +18,8 @@ using namespace std::placeholders;
 
 namespace
 {
-std::string const kLocationStateMode = "LastLocationStateMode";
-std::string const kLastEnterBackground = "LastEnterBackground";
+std::string_view constexpr kLocationStateMode = "LastLocationStateMode";
+std::string_view constexpr kLastEnterBackground = "LastEnterBackground";
 }
 
 DrapeEngine::DrapeEngine(Params && params)
@@ -35,8 +34,7 @@ DrapeEngine::DrapeEngine(Params && params)
 
   gui::DrapeGui::Instance().SetSurfaceSize(m2::PointF(m_viewport.GetWidth(), m_viewport.GetHeight()));
 
-  m_glyphGenerator = make_unique_dp<dp::GlyphGenerator>(df::VisualParams::Instance().GetGlyphSdfScale());
-  m_textureManager = make_unique_dp<dp::TextureManager>(make_ref(m_glyphGenerator));
+  m_textureManager = make_unique_dp<dp::TextureManager>();
   m_threadCommutator = make_unique_dp<ThreadsCommutator>();
   m_requestedTiles = make_unique_dp<RequestedTiles>();
 
@@ -89,7 +87,8 @@ DrapeEngine::DrapeEngine(Params && params)
                                     params.m_trafficEnabled,
                                     params.m_blockTapEvents,
                                     std::move(effects),
-                                    params.m_onGraphicsContextInitialized);
+                                    params.m_onGraphicsContextInitialized,
+                                    std::move(params.m_renderInjectionHandler));
 
   BackendRenderer::Params brParams(
       params.m_apiVersion, frParams.m_commutator, frParams.m_oglContextFactory, frParams.m_texMng,
@@ -107,7 +106,7 @@ DrapeEngine::DrapeEngine(Params && params)
   RecacheMapShapes();
 
   if (params.m_showChoosePositionMark)
-    EnableChoosePositionMode(true, std::move(params.m_boundAreaTriangles), false, m2::PointD());
+    EnableChoosePositionMode(true, std::move(params.m_boundAreaTriangles), nullptr);
 
   ResizeImpl(m_viewport.GetWidth(), m_viewport.GetHeight());
 }
@@ -129,7 +128,6 @@ DrapeEngine::~DrapeEngine()
 
   gui::DrapeGui::Instance().Destroy();
   m_textureManager->Release();
-  m_glyphGenerator.reset();
 }
 
 void DrapeEngine::RecoverSurface(int w, int h, bool recreateContextDependentResources)
@@ -199,6 +197,11 @@ void DrapeEngine::Scroll(double distanceX, double distanceY)
 void DrapeEngine::Rotate(double azimuth, bool isAnim)
 {
   AddUserEvent(make_unique_dp<RotateEvent>(azimuth, isAnim, nullptr /* parallelAnimCreator */));
+}
+
+void DrapeEngine::MakeFrameActive()
+{
+  AddUserEvent(make_unique_dp<ActiveFrameEvent>());
 }
 
 void DrapeEngine::ScaleAndSetCenter(m2::PointD const & centerPt, double scaleFactor, bool isAnim,
@@ -652,6 +655,17 @@ void DrapeEngine::Allow3dMode(bool allowPerspectiveInNavigation, bool allow3dBui
                                   MessagePriority::Normal);
 }
 
+void DrapeEngine::SetMapLangIndex(int8_t mapLangIndex)
+{
+  m_threadCommutator->PostMessage(ThreadsCommutator::ResourceUploadThread,
+                                  make_unique_dp<SetMapLangIndexMessage>(mapLangIndex),
+                                  MessagePriority::Normal);
+
+  m_threadCommutator->PostMessage(ThreadsCommutator::RenderThread,
+                                  make_unique_dp<SetMapLangIndexMessage>(mapLangIndex),
+                                  MessagePriority::Normal);
+}
+
 void DrapeEngine::EnablePerspective()
 {
   m_threadCommutator->PostMessage(ThreadsCommutator::RenderThread,
@@ -676,7 +690,7 @@ void DrapeEngine::ClearGpsTrackPoints()
 }
 
 void DrapeEngine::EnableChoosePositionMode(bool enable, std::vector<m2::TriangleD> && boundAreaTriangles,
-                                           bool hasPosition, m2::PointD const & position)
+                                           m2::PointD const * optionalPosition)
 {
   m_choosePositionMode = enable;
   bool kineticScroll = m_kineticScrollEnabled;
@@ -694,7 +708,7 @@ void DrapeEngine::EnableChoosePositionMode(bool enable, std::vector<m2::Triangle
   }
   m_threadCommutator->PostMessage(ThreadsCommutator::RenderThread,
                                   make_unique_dp<SetAddNewPlaceModeMessage>(enable, std::move(boundAreaTriangles),
-                                                                            kineticScroll, hasPosition, position),
+                                                                            kineticScroll, optionalPosition),
                                   MessagePriority::Normal);
 }
 

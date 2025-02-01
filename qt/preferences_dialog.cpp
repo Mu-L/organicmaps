@@ -1,15 +1,20 @@
 #include "qt/preferences_dialog.hpp"
 
+#include "indexer/map_style.hpp"
+#include "coding/string_utf8_multilang.hpp"
 #include "map/framework.hpp"
 
 #include "platform/measurement_utils.hpp"
+#include "platform/preferred_languages.hpp"
 #include "platform/settings.hpp"
+#include "platform/style_utils.hpp"
 
-#include <QtGlobal>  // QT_VERSION_CHECK
 #include <QtGui/QIcon>
 #include <QLocale>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QLabel>
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QGroupBox>
@@ -58,11 +63,7 @@ namespace qt
       unitsGroup->button(static_cast<int>(u))->setChecked(true);
 
       // Temporary to pass the address of overloaded function.
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-      void (QButtonGroup::* buttonClicked)(int) = &QButtonGroup::buttonClicked;
-#else
       void (QButtonGroup::* buttonClicked)(int) = &QButtonGroup::idClicked;
-#endif
       connect(unitsGroup, buttonClicked, [&framework](int i)
       {
         Units u = Units::Metric;
@@ -83,6 +84,88 @@ namespace qt
       connect(largeFontCheckBox, &QCheckBox::stateChanged, [&framework](int i)
       {
         framework.SetLargeFontsSize(static_cast<bool>(i));
+      });
+    }
+
+    QCheckBox * transliterationCheckBox = new QCheckBox("Transliterate to Latin");
+    {
+      transliterationCheckBox->setChecked(framework.LoadTransliteration());
+      connect(transliterationCheckBox, &QCheckBox::stateChanged, [&framework](int i)
+      {
+        bool const enable = i > 0;
+        framework.SaveTransliteration(enable);
+        framework.AllowTransliteration(enable);
+      });
+    }
+
+    QCheckBox * developerModeCheckBox = new QCheckBox("Developer Mode");
+    {
+      bool developerMode;
+      if (settings::Get(settings::kDeveloperMode, developerMode) && developerMode)
+        developerModeCheckBox->setChecked(developerMode);
+      connect(developerModeCheckBox, &QCheckBox::stateChanged, [](int i)
+      {
+        settings::Set(settings::kDeveloperMode, static_cast<bool>(i));
+      });
+    }
+
+    QLabel * mapLanguageLabel = new QLabel("Map Language");
+    QComboBox * mapLanguageComboBox = new QComboBox();
+    {
+      // The property maxVisibleItems is ignored for non-editable comboboxes in styles that
+      // return true for `QStyle::SH_ComboBox_Popup such as the Mac style or the Gtk+ Style.
+      // So we ensure that it returns false here.
+      mapLanguageComboBox->setStyleSheet("QComboBox { combobox-popup: 0; }");
+      mapLanguageComboBox->setMaxVisibleItems(10);
+      StringUtf8Multilang::Languages const & supportedLanguages = StringUtf8Multilang::GetSupportedLanguages(/* includeServiceLangs */ false);
+      QStringList languagesList = QStringList();
+      for (auto const & language : supportedLanguages)
+        languagesList << QString::fromStdString(std::string(language.m_name));
+
+      mapLanguageComboBox->addItems(languagesList);
+      std::string const & mapLanguageCode = framework.GetMapLanguageCode();
+      int8_t languageIndex = StringUtf8Multilang::GetLangIndex(mapLanguageCode);
+      if (languageIndex == StringUtf8Multilang::kUnsupportedLanguageCode)
+        languageIndex = StringUtf8Multilang::kDefaultCode;
+
+      mapLanguageComboBox->setCurrentText(QString::fromStdString(std::string(StringUtf8Multilang::GetLangNameByCode(languageIndex))));
+      connect(mapLanguageComboBox, &QComboBox::activated, [&framework, &supportedLanguages](int index)
+      {
+        auto const & mapLanguageCode = std::string(supportedLanguages[index].m_code);
+        framework.SetMapLanguageCode(mapLanguageCode);
+      });
+    }
+
+    QButtonGroup * nightModeGroup = new QButtonGroup(this);
+    QGroupBox * nightModeRadioBox = new QGroupBox("Night Mode");
+    {
+      using namespace style_utils;
+      QHBoxLayout * layout = new QHBoxLayout();
+
+      QRadioButton * radioButton = new QRadioButton("Off");
+      layout->addWidget(radioButton);
+      nightModeGroup->addButton(radioButton, static_cast<int>(NightMode::Off));
+
+      radioButton = new QRadioButton("On");
+      layout->addWidget(radioButton);
+      nightModeGroup->addButton(radioButton, static_cast<int>(NightMode::On));
+
+      nightModeRadioBox->setLayout(layout);
+
+      int i;
+      if (!settings::Get(settings::kNightMode, i))
+      {
+        i = static_cast<int>(MapStyleIsDark(framework.GetMapStyle()) ? NightMode::On : NightMode::Off);
+        settings::Set(settings::kNightMode, i);
+      }
+      nightModeGroup->button(i)->setChecked(true);
+
+      void (QButtonGroup::* buttonClicked)(int) = &QButtonGroup::idClicked;
+      connect(nightModeGroup, buttonClicked, [&framework](int i)
+      {
+        NightMode nightMode = static_cast<NightMode>(i);
+        settings::Set(settings::kNightMode, i);
+        framework.SetMapStyle((nightMode == NightMode::Off) ? GetLightMapStyleVariant(framework.GetMapStyle()) : GetDarkMapStyleVariant(framework.GetMapStyle()));
       });
     }
 
@@ -115,6 +198,11 @@ namespace qt
     QVBoxLayout * finalLayout = new QVBoxLayout();
     finalLayout->addWidget(unitsRadioBox);
     finalLayout->addWidget(largeFontCheckBox);
+    finalLayout->addWidget(transliterationCheckBox);
+    finalLayout->addWidget(developerModeCheckBox);
+    finalLayout->addWidget(mapLanguageLabel);
+    finalLayout->addWidget(mapLanguageComboBox);
+    finalLayout->addWidget(nightModeRadioBox);
 #ifdef BUILD_DESIGNER
     finalLayout->addWidget(indexRegenCheckBox);
 #endif

@@ -17,6 +17,7 @@
 #include "map/track.hpp"
 #include "map/traffic_manager.hpp"
 #include "map/transit/transit_reader.hpp"
+#include "map/gps_track_collection.hpp"
 
 #include "drape_frontend/gui/skin.hpp"
 #include "drape_frontend/drape_api.hpp"
@@ -47,6 +48,7 @@
 #include "platform/location.hpp"
 #include "platform/platform.hpp"
 #include "platform/distance.hpp"
+#include "platform/products.hpp"
 
 #include "routing/router.hpp"
 
@@ -60,7 +62,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -308,7 +309,9 @@ private:
   void DeactivateHotelSearchMark();
 
 public:
-  void DeactivateMapSelection(bool notifyUI);
+  void DeactivateMapSelection();
+  void DeactivateMapSelectionCircle();
+  void SwitchFullScreen();
   /// Used to "refresh" UI in some cases (e.g. feature editing).
   void UpdatePlacePageInfoForCurrentSelection(
       std::optional<place_page::BuildInfo> const & overrideInfo = {});
@@ -319,13 +322,15 @@ public:
     using OnOpen = std::function<void()>;
     /// Called to notify UI that object on a map was deselected (UI should hide Place Page).
     /// If switchFullScreenMode is true, ui can [optionally] enter or exit full screen mode.
-    using OnClose = std::function<void(bool /*switchFullScreenMode*/)>;
+    using OnClose = std::function<void()>;
     using OnUpdate = std::function<void()>;
+    using OnSwitchFullScreen = std::function<void()>;
   };
 
   void SetPlacePageListeners(PlacePageEvent::OnOpen onOpen,
                              PlacePageEvent::OnClose onClose,
-                             PlacePageEvent::OnUpdate onUpdate);
+                             PlacePageEvent::OnUpdate onUpdate,
+                             PlacePageEvent::OnSwitchFullScreen onSwitchFullScreen);
   bool HasPlacePageInfo() const { return m_currentPlacePageInfo.has_value(); }
   place_page::Info const & GetCurrentPlacePageInfo() const;
   place_page::Info & GetCurrentPlacePageInfo();
@@ -337,7 +342,7 @@ public:
   void InvalidateRendering();
   void EnableDebugRectRendering(bool enabled);
 
-  void EnableChoosePositionMode(bool enable, bool enableBounds, bool applyPosition, m2::PointD const & position);
+  void EnableChoosePositionMode(bool enable, bool enableBounds, m2::PointD const * optionalPosition);
   void BlockTapEvents(bool block);
 
   using TCurrentCountryChanged = std::function<void(storage::CountryId const &)>;
@@ -355,7 +360,7 @@ private:
   std::optional<place_page::Info> m_currentPlacePageInfo;
 
   void OnTapEvent(place_page::BuildInfo const & buildInfo);
-  std::optional<place_page::Info> BuildPlacePageInfo(place_page::BuildInfo const & buildInfo);
+  place_page::Info BuildPlacePageInfo(place_page::BuildInfo const & buildInfo);
   void BuildTrackPlacePage(Track::TrackSelectionInfo const & trackSelectionInfo, place_page::Info & info);
   Track::TrackSelectionInfo FindTrackInTapPosition(place_page::BuildInfo const & buildInfo) const;
   UserMark const * FindUserMarkInTapPosition(place_page::BuildInfo const & buildInfo) const;
@@ -368,6 +373,7 @@ private:
   PlacePageEvent::OnOpen m_onPlacePageOpen;
   PlacePageEvent::OnClose m_onPlacePageClose;
   PlacePageEvent::OnUpdate m_onPlacePageUpdate;
+  PlacePageEvent::OnSwitchFullScreen m_onSwitchFullScreen;
 
 private:
   std::vector<m2::TriangleD> GetSelectedFeatureTriangles() const;
@@ -397,6 +403,7 @@ public:
 
     bool m_isChoosePositionMode = false;
     df::Hints m_hints;
+    dp::RenderInjectionHandler m_renderInjectionHandler;
   };
 
   void CreateDrapeEngine(ref_ptr<dp::GraphicsContextFactory> contextFactory, DrapeCreationParams && params);
@@ -430,6 +437,14 @@ public:
   void ConnectToGpsTracker();
   void DisconnectFromGpsTracker();
 
+  using TrackRecordingUpdateHandler = platform::SafeCallback<void(GpsTrackInfo const & trackInfo)>;
+  void StartTrackRecording();
+  void SetTrackRecordingUpdateHandler(TrackRecordingUpdateHandler && trackRecordingDidUpdate);
+  void StopTrackRecording();
+  void SaveTrackRecordingWithName(std::string const & name);
+  bool IsTrackRecordingEmpty() const;
+  bool IsTrackRecordingEnabled() const;
+
   void SetMapStyle(MapStyle mapStyle);
   void MarkMapStyle(MapStyle mapStyle);
   MapStyle GetMapStyle() const;
@@ -451,16 +466,17 @@ private:
   storage::CountryId m_lastReportedCountry;
   TCurrentCountryChanged m_currentCountryChanged;
 
-  void OnUpdateGpsTrackPointsCallback(std::vector<std::pair<size_t, location::GpsTrackInfo>> && toAdd,
-                                      std::pair<size_t, size_t> const & toRemove);
+  void OnUpdateGpsTrackPointsCallback(std::vector<std::pair<size_t, location::GpsInfo>> && toAdd,
+                                      std::pair<size_t, size_t> const & toRemove,
+                                      GpsTrackInfo const & trackInfo);
+
+  TrackRecordingUpdateHandler m_trackRecordingUpdateHandler;
 
   CachingRankTableLoader m_popularityLoader;
 
   std::unique_ptr<descriptions::Loader> m_descriptionsLoader;
 
 public:
-  using SearchRequest = search::QuerySaver::SearchRequest;
-
   // Moves viewport to the search result and taps on it.
   void SelectSearchResult(search::Result const & res, bool animation);
 
@@ -545,6 +561,8 @@ public:
 
   void TouchEvent(df::TouchEvent const & touch);
 
+  void MakeFrameActive();
+
   int GetDrawScale() const;
 
   void RunFirstLaunchAnimation();
@@ -572,9 +590,11 @@ public:
 
   ParsedRoutingData GetParsedRoutingData() const;
   url_scheme::SearchRequest GetParsedSearchRequest() const;
+  std::string GetParsedOAuth2Code() const;
   std::string const & GetParsedAppName() const;
   std::string const & GetParsedBackUrl() const;
   ms::LatLon GetParsedCenterLatLon() const;
+  url_scheme::InAppFeatureHighlightRequest GetInAppFeatureHighlightRequest() const;
 
   using FeatureMatcher = std::function<bool(FeatureType & ft)>;
 
@@ -597,6 +617,8 @@ private:
                                std::string const & customTitle = {}) const;
   void FillPostcodeInfo(std::string const & postcode, m2::PointD const & mercator,
                         place_page::Info & info) const;
+
+  void FillUserMarkInfo(UserMark const * mark, place_page::Info & outInfo);
 
   void FillInfoFromFeatureType(FeatureType & ft, place_page::Info & info) const;
   void FillApiMarkInfo(ApiMarkPoint const & api, place_page::Info & info) const;
@@ -659,8 +681,8 @@ private:
 
 public:
   /// @name Data versions
-  bool IsDataVersionUpdated();
-  void UpdateSavedDataVersion();
+  // bool IsDataVersionUpdated();
+  // void UpdateSavedDataVersion();
   int64_t GetCurrentDataVersion() const;
 
 public:
@@ -671,6 +693,12 @@ public:
   void Allow3dMode(bool allow3d, bool allow3dBuildings);
   void Save3dMode(bool allow3d, bool allow3dBuildings);
   void Load3dMode(bool & allow3d, bool & allow3dBuildings);
+
+private:
+  void ApplyMapLanguageCode(std::string const & langCode);
+public:
+  static std::string GetMapLanguageCode();
+  void SetMapLanguageCode(std::string const & langCode);
 
   void SetLargeFontsSize(bool isLargeSize);
   bool LoadLargeFontsSize();
@@ -715,10 +743,8 @@ protected:
   void RegisterCountryFilesOnRoute(std::shared_ptr<routing::NumMwmIds> ptr) const override;
 
 public:
-  /// @name Editor interface.
-  /// Initializes feature for Create Object UI.
   /// @returns false in case when coordinate is in the ocean or mwm is not downloaded.
-  bool CanEditMap() const;
+  bool CanEditMapForPosition(m2::PointD const & position) const;
 
   bool CreateMapObject(m2::PointD const & mercator, uint32_t const featureType, osm::EditableMapObject & emo) const;
   /// @returns false if feature is invalid or can't be edited.
@@ -739,4 +765,25 @@ public:
   // PowerManager::Subscriber override.
   void OnPowerFacilityChanged(power_management::Facility const facility, bool enabled) override;
   void OnPowerSchemeChanged(power_management::Scheme const actualScheme) override;
+
+public:
+  bool ShouldShowProducts() const;
+  std::optional<products::ProductsConfig> GetProductsConfiguration() const;
+
+  enum class ProductsPopupCloseReason
+  {
+    Close,
+    SelectProduct,
+    AlreadyDonated,
+    RemindLater
+  };
+
+  ProductsPopupCloseReason FromString(std::string const & str) const;
+
+  void DidCloseProductsPopup(ProductsPopupCloseReason reason) const;
+  void DidSelectProduct(products::ProductsConfig::Product const & product) const;
+
+private:
+  uint32_t GetTimeoutForReason(ProductsPopupCloseReason reason) const;
+  std::string_view ToString(ProductsPopupCloseReason reason) const;
 };

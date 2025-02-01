@@ -1,10 +1,13 @@
 protocol PlacePageViewProtocol: AnyObject {
-  var presenter: PlacePagePresenterProtocol! { get set }
+  var interactor: PlacePageInteractorProtocol! { get set }
+
   func setLayout(_ layout: IPlacePageLayout)
-  func layoutIfNeeded()
-  func closeAnimated()
+  func closeAnimated(completion: (() -> Void)?)
   func updatePreviewOffset()
   func showNextStop()
+  func layoutIfNeeded()
+  func updateWithLayout(_ layout: IPlacePageLayout)
+  func showAlert(_ alert: UIAlertController)
 }
 
 final class PlacePageScrollView: UIScrollView {
@@ -32,7 +35,7 @@ final class PlacePageScrollView: UIScrollView {
     stackView.distribution = .fill
     return stackView
   }()
-  var presenter: PlacePagePresenterProtocol!
+  var interactor: PlacePageInteractorProtocol!
   var beginDragging = false
   var rootViewController: MapViewController {
     MapViewController.shared()!
@@ -49,36 +52,8 @@ final class PlacePageScrollView: UIScrollView {
   override func viewDidLoad() {
     super.viewDidLoad()
 
-    layout.headerViewControllers.forEach({ addToHeader($0) })
-    layout.bodyViewControllers.forEach({ addToBody($0) })
-
-    if let actionBar = layout.actionBar {
-      hideActionBar(false)
-      addActionBar(actionBar)
-    } else {
-      hideActionBar(true)
-    }
-
-    let bgView = UIView()
-    bgView.styleName = "PPBackgroundView"
-    stackView.insertSubview(bgView, at: 0)
-    bgView.alignToSuperview()
-
-    scrollView.decelerationRate = .fast
-    scrollView.backgroundColor = .clear
-    
-    stackView.backgroundColor = .clear
-
-    let cornersToMask: CACornerMask = alternativeSizeClass(iPhone: [], iPad: [.layerMinXMaxYCorner, .layerMaxXMaxYCorner])
-    actionBarContainerView.layer.setCorner(radius: 16, corners: cornersToMask)
-    actionBarContainerView.layer.masksToBounds = true
-
-    // See https://github.com/organicmaps/organicmaps/issues/6917 for the details.
-    if #available(iOS 13.0, *), previousTraitCollection == nil {
-      scrollView.contentInset = alternativeSizeClass(iPhone: UIEdgeInsets(top: view.height, left: 0, bottom: 0, right: 0),
-                                                     iPad: UIEdgeInsets.zero)
-      scrollView.layoutIfNeeded()
-    }
+    setupView()
+    setupLayout(layout)
   }
 
   override func viewDidLayoutSubviews() {
@@ -94,6 +69,11 @@ final class PlacePageScrollView: UIScrollView {
     previousTraitCollection = traitCollection
   }
 
+  override func viewWillAppear(_ animated: Bool) {
+    super.viewWillAppear(animated)
+    interactor?.viewWillAppear()
+  }
+
   override func viewDidAppear(_ animated: Bool) {
     super.viewDidAppear(animated)
     updatePreviewOffset()
@@ -102,7 +82,7 @@ final class PlacePageScrollView: UIScrollView {
   override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
     super.traitCollectionDidChange(previousTraitCollection)
     // Update layout when the device was rotated but skip when the appearance was changed.
-    if self.previousTraitCollection != nil, previousTraitCollection?.userInterfaceStyle == traitCollection.userInterfaceStyle {
+    if self.previousTraitCollection != nil, previousTraitCollection?.userInterfaceStyle == traitCollection.userInterfaceStyle, previousTraitCollection?.verticalSizeClass != traitCollection.verticalSizeClass {
       DispatchQueue.main.async {
         self.updateSteps()
         self.showLastStop()
@@ -112,21 +92,39 @@ final class PlacePageScrollView: UIScrollView {
     }
   }
 
-  func updateSteps() {
+
+  // MARK: - Actions
+
+  @IBAction func onPan(gesture: UIPanGestureRecognizer) {
+    let xOffset = gesture.translation(in: view.superview).x
+    gesture.setTranslation(CGPoint.zero, in: view.superview)
+    view.minX += xOffset
+    view.minX = min(view.minX, 0)
+    let alpha = view.maxX / view.width
+    view.alpha = alpha
+
+    let state = gesture.state
+    if state == .ended || state == .cancelled {
+      if alpha < 0.8 {
+        closeAnimated()
+      } else {
+        UIView.animate(withDuration: kDefaultAnimationDuration) {
+          self.view.minX = 0
+          self.view.alpha = 1
+        }
+      }
+    }
+  }
+
+  // MARK: - Private methods
+
+  private func updateSteps() {
     layoutIfNeeded()
     scrollSteps = layout.calculateSteps(inScrollView: scrollView,
                                         compact: traitCollection.verticalSizeClass == .compact)
   }
 
-  func updatePreviewOffset() {
-    updateSteps()
-    if !beginDragging {
-      let stateOffset = isPreviewPlus ? scrollSteps[2].offset : scrollSteps[1].offset + Constants.additionalPreviewOffset
-      scrollTo(CGPoint(x: 0, y: stateOffset))
-    }
-  }
-
-  func findNextStop(_ offset: CGFloat, velocity: CGFloat) -> PlacePageState {
+  private func findNextStop(_ offset: CGFloat, velocity: CGFloat) -> PlacePageState {
     if velocity == 0 {
       return findNearestStop(offset)
     }
@@ -153,6 +151,71 @@ final class PlacePageScrollView: UIScrollView {
     return result
   }
 
+  private func setupView() {
+    let bgView = UIView()
+    bgView.setStyle(.ppBackgroundView)
+    stackView.insertSubview(bgView, at: 0)
+    bgView.alignToSuperview()
+
+    scrollView.decelerationRate = .fast
+    scrollView.backgroundColor = .clear
+
+    stackView.backgroundColor = .clear
+
+    let cornersToMask: CACornerMask = alternativeSizeClass(iPhone: [], iPad: [.layerMinXMaxYCorner, .layerMaxXMaxYCorner])
+    actionBarContainerView.layer.setCorner(radius: 16, corners: cornersToMask)
+    actionBarContainerView.layer.masksToBounds = true
+
+    // See https://github.com/organicmaps/organicmaps/issues/6917 for the details.
+    if #available(iOS 13.0, *), previousTraitCollection == nil {
+      scrollView.contentInset = alternativeSizeClass(iPhone: UIEdgeInsets(top: view.height, left: 0, bottom: 0, right: 0),
+                                                     iPad: UIEdgeInsets.zero)
+      scrollView.layoutIfNeeded()
+    }
+  }
+
+  private func setupLayout(_ layout: IPlacePageLayout) {
+    setLayout(layout)
+
+    fillHeader(with: layout.headerViewControllers)
+    fillBody(with: layout.bodyViewControllers)
+
+    beginDragging = false
+    if let actionBar = layout.actionBar {
+      hideActionBar(false)
+      addActionBar(actionBar)
+    } else {
+      hideActionBar(true)
+    }
+  }
+
+  private func fillHeader(with viewControllers: [UIViewController]) {
+    viewControllers.forEach { [self] viewController in
+      if !stackView.arrangedSubviews.contains(headerStackView) {
+        stackView.addArrangedSubview(headerStackView)
+      }
+      headerStackView.addArrangedSubview(viewController.view)
+    }
+    headerStackView.addSeparator(.bottom)
+  }
+
+  private func fillBody(with viewControllers: [UIViewController]) {
+    viewControllers.forEach { [self] viewController in
+      addChild(viewController)
+      stackView.addArrangedSubview(viewController.view)
+      viewController.didMove(toParent: self)
+      viewController.view.addSeparator(.top)
+      viewController.view.addSeparator(.bottom)
+    }
+  }
+
+  private func cleanupLayout() {
+    layout?.actionBar?.view.removeFromSuperview()
+    layout?.navigationBar?.view.removeFromSuperview()
+    headerStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+    stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+  }
+
   private func findNearestStop(_ offset: CGFloat) -> PlacePageState {
     var result = scrollSteps[0]
     scrollSteps.suffix(from: 1).forEach { ppState in
@@ -163,63 +226,7 @@ final class PlacePageScrollView: UIScrollView {
     return result
   }
 
-  func showLastStop() {
-    if let lastStop = scrollSteps.last {
-      scrollTo(CGPoint(x: 0, y: lastStop.offset), forced: true)
-    }
-  }
-
-  @IBAction func onPan(gesture: UIPanGestureRecognizer) {
-    let xOffset = gesture.translation(in: view.superview).x
-    gesture.setTranslation(CGPoint.zero, in: view.superview)
-    view.minX += xOffset
-    view.minX = min(view.minX, 0)
-    let alpha = view.maxX / view.width
-    view.alpha = alpha
-
-    let state = gesture.state
-    if state == .ended || state == .cancelled {
-      if alpha < 0.8 {
-        closeAnimated()
-      } else {
-        UIView.animate(withDuration: kDefaultAnimationDuration) {
-          self.view.minX = 0
-          self.view.alpha = 1
-        }
-      }
-    }
-  }
-
-  func updateTopBound(_ bound: CGFloat, duration: TimeInterval) {
-    alternativeSizeClass(iPhone: {
-      presenter.updateTopBound(bound, duration: duration)
-    }, iPad: {})
-  }
-}
-
-extension PlacePageViewController: PlacePageViewProtocol {
-  func setLayout(_ layout: IPlacePageLayout) {
-    self.layout = layout
-  }
-
-  func hideActionBar(_ value: Bool) {
-    actionBarHeightConstraint.constant = !value ? Constants.actionBarHeight : .zero
-  }
-
-  func addToHeader(_ headerViewController: UIViewController) {
-    if !stackView.arrangedSubviews.contains(headerStackView) {
-      stackView.addArrangedSubview(headerStackView)
-    }
-    headerStackView.addArrangedSubview(headerViewController.view)
-  }
-
-  func addToBody(_ viewController: UIViewController) {
-    addChild(viewController)
-    stackView.addArrangedSubview(viewController.view)
-    viewController.didMove(toParent: self)
-  }
-
-  func addActionBar(_ actionBarViewController: UIViewController) {
+  private func addActionBar(_ actionBarViewController: UIViewController) {
     addChild(actionBarViewController)
     actionBarViewController.view.translatesAutoresizingMaskIntoConstraints = false
     actionBarContainerView.addSubview(actionBarViewController.view)
@@ -232,7 +239,7 @@ extension PlacePageViewController: PlacePageViewProtocol {
     ])
   }
 
-  func addNavigationBar(_ header: UIViewController) {
+  private func addNavigationBar(_ header: UIViewController) {
     header.view.translatesAutoresizingMaskIntoConstraints = false
     view.addSubview(header.view)
     addChild(header)
@@ -243,7 +250,7 @@ extension PlacePageViewController: PlacePageViewProtocol {
     ])
   }
 
-  func scrollTo(_ point: CGPoint, animated: Bool = true, forced: Bool = false, completion: (() -> Void)? = nil) {
+  private func scrollTo(_ point: CGPoint, animated: Bool = true, forced: Bool = false, completion: (() -> Void)? = nil) {
     if alternativeSizeClass(iPhone: beginDragging, iPad: true) && !forced {
       return
     }
@@ -268,22 +275,63 @@ extension PlacePageViewController: PlacePageViewProtocol {
     }
   }
 
+  private func showLastStop() {
+    if let lastStop = scrollSteps.last {
+      scrollTo(CGPoint(x: 0, y: lastStop.offset), forced: true)
+    }
+  }
+
+  private func updateTopBound(_ bound: CGFloat, duration: TimeInterval) {
+    alternativeSizeClass(iPhone: {
+      interactor.updateTopBound(bound, duration: duration)
+    }, iPad: {})
+  }
+}
+
+// MARK: - PlacePageViewProtocol
+
+extension PlacePageViewController: PlacePageViewProtocol {
+  func layoutIfNeeded() {
+    guard layout != nil else { return }
+    view.layoutIfNeeded()
+  }
+
+  func updateWithLayout(_ layout: IPlacePageLayout) {
+    setupLayout(layout)
+  }
+  
+  func setLayout(_ layout: IPlacePageLayout) {
+    if self.layout != nil {
+      cleanupLayout()
+    }
+    self.layout = layout
+  }
+
+  func hideActionBar(_ value: Bool) {
+    actionBarHeightConstraint.constant = !value ? Constants.actionBarHeight : .zero
+  }
+
+  func updatePreviewOffset() {
+    updateSteps()
+    if !beginDragging {
+      let stateOffset = isPreviewPlus ? scrollSteps[2].offset : scrollSteps[1].offset + Constants.additionalPreviewOffset
+      scrollTo(CGPoint(x: 0, y: stateOffset))
+    }
+  }
+
   func showNextStop() {
     if let nextStop = scrollSteps.last(where: { $0.offset > scrollView.contentOffset.y }) {
       scrollTo(CGPoint(x: 0, y: nextStop.offset), forced: true)
     }
   }
 
-  func layoutIfNeeded() {
-    view.layoutIfNeeded()
-  }
-
-  func closeAnimated() {
+  @objc
+  func closeAnimated(completion: (() -> Void)? = nil) {
     alternativeSizeClass(iPhone: {
       self.scrollTo(CGPoint(x: 0, y: -self.scrollView.height + 1),
-                    animated: true,
                     forced: true) {
                 self.rootViewController.dismissPlacePage()
+                completion?()
       }
     }, iPad: {
       UIView.animate(withDuration: kDefaultAnimationDuration,
@@ -293,8 +341,13 @@ extension PlacePageViewController: PlacePageViewProtocol {
                       self.view.alpha = 0
       }) { complete in
         self.rootViewController.dismissPlacePage()
+        completion?()
       }
     })
+  }
+
+  func showAlert(_ alert: UIAlertController) {
+    present(alert, animated: true)
   }
 }
 
@@ -342,7 +395,7 @@ extension PlacePageViewController: UIScrollViewDelegate {
   }
 
   private func setNavigationBarVisible(_ visible: Bool) {
-    guard visible != isNavigationBarVisible, let navigationBar = layout.navigationBar else { return }
+    guard visible != isNavigationBarVisible, let navigationBar = layout?.navigationBar else { return }
     isNavigationBarVisible = visible
     if isNavigationBarVisible {
       addNavigationBar(navigationBar)

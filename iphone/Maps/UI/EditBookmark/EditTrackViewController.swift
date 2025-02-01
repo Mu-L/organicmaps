@@ -17,6 +17,7 @@ final class EditTrackViewController: MWMTableViewController {
   
   private var editingCompleted: (Bool) -> Void
 
+  private var placePageData: PlacePageData?
   private let trackId: MWMTrackID
   private var trackTitle: String?
   private var trackGroupTitle: String?
@@ -24,40 +25,48 @@ final class EditTrackViewController: MWMTableViewController {
   private var trackColor: UIColor
 
   private let bookmarksManager = BookmarksManager.shared()
-  
+
+  @objc
   init(trackId: MWMTrackID, editCompletion completion: @escaping (Bool) -> Void) {
     self.trackId = trackId
     
-    let bm = BookmarksManager.shared()
-    let track = bm.track(withId: trackId)
-    
-    trackTitle = track.trackName
-    trackColor = track.trackColor
+    let track = bookmarksManager.track(withId: trackId)
+    self.trackTitle = track.trackName
+    self.trackColor = track.trackColor
 
-    let category = bm.category(forTrackId: trackId)
-    trackGroupId = category.categoryId
-    trackGroupTitle = category.title
-    
+    let category = bookmarksManager.category(forTrackId: trackId)
+    self.trackGroupId = category.categoryId
+    self.trackGroupTitle = category.title
 
-    editingCompleted = completion
-
+    self.editingCompleted = completion
     super.init(style: .grouped)
   }
-  
+
+  override func viewWillAppear(_ animated: Bool) {
+    super.viewWillAppear(animated)
+    updateTrackIfNeeded()
+  }
+
+  deinit {
+    removeFromBookmarksManagerObserverList()
+  }
+
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
-  
+
   override func viewDidLoad() {
     super.viewDidLoad()
-    
+
     title = L("track_title")
     navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .save,
                                                         target: self,
                                                         action: #selector(onSave))
-    
+
     tableView.registerNib(cell: BookmarkTitleCell.self)
     tableView.registerNib(cell: MWMButtonCell.self)
+
+    addToBookmarksManagerObserverList()
   }
     
   // MARK: - Table view data source
@@ -95,8 +104,8 @@ final class EditTrackViewController: MWMTableViewController {
         let cell = tableView.dequeueDefaultCell(for: indexPath)
         cell.textLabel?.text = trackGroupTitle
         cell.imageView?.image = UIImage(named: "ic_folder")
-        cell.imageView?.styleName = "MWMBlack";
-        cell.accessoryType = .disclosureIndicator;
+        cell.imageView?.setStyle(.black)
+        cell.accessoryType = .disclosureIndicator
         return cell;
       default:
         fatalError()
@@ -123,10 +132,25 @@ final class EditTrackViewController: MWMTableViewController {
   }
   
   // MARK: - Private
-  
+
+  private func updateTrackIfNeeded() {
+    // TODO: Update the track content on the Edit screen instead of closing it when the track gets updated from cloud.
+    if !bookmarksManager.hasTrack(trackId) {
+      goBack()
+    }
+  }
+
+  private func addToBookmarksManagerObserverList() {
+    bookmarksManager.add(self)
+  }
+
+  private func removeFromBookmarksManagerObserverList() {
+    bookmarksManager.remove(self)
+  }
+
   @objc private func onSave() {
     view.endEditing(true)
-    BookmarksManager.shared().updateTrack(trackId, setGroupId: trackGroupId, color: trackColor.sRGBColor, title: trackTitle ?? "")
+    BookmarksManager.shared().updateTrack(trackId, setGroupId: trackGroupId, color: trackColor, title: trackTitle ?? "")
     editingCompleted(true)
     goBack()
   }
@@ -157,10 +181,22 @@ extension EditTrackViewController: BookmarkTitleCellDelegate {
   }
 }
 
+// MARK: - MWMButtonCellDelegate
+
 extension EditTrackViewController: MWMButtonCellDelegate {
   func cellDidPressButton(_ cell: UITableViewCell) {
-    bookmarksManager.deleteTrack(trackId)
-    goBack()
+    guard let indexPath = tableView.indexPath(for: cell) else {
+      fatalError("Invalid cell")
+    }
+    switch Sections(rawValue: indexPath.section) {
+    case .info:
+      break
+    case .delete:
+      bookmarksManager.deleteTrack(trackId)
+      goBack()
+    default:
+      fatalError("Invalid section")
+    }
   }
 }
 
@@ -183,5 +219,18 @@ extension EditTrackViewController: SelectBookmarkGroupViewControllerDelegate {
     trackGroupId = groupId
     tableView.reloadRows(at: [IndexPath(row: InfoSectionRows.bookmarkGroup.rawValue, section: Sections.info.rawValue)],
                          with: .none)
+  }
+}
+
+// MARK: - BookmarksObserver
+extension EditTrackViewController: BookmarksObserver {
+  func onBookmarksLoadFinished() {
+    updateTrackIfNeeded()
+  }
+
+  func onBookmarksCategoryDeleted(_ groupId: MWMMarkGroupID) {
+    if trackGroupId == groupId {
+      goBack()
+    }
   }
 }

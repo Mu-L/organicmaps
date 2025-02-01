@@ -14,6 +14,7 @@
 
 #include "indexer/feature.hpp"
 #include "indexer/feature_algo.hpp"
+#include "indexer/ftypes_matcher.hpp"
 #include "indexer/mwm_set.hpp"
 
 #include "geometry/mercator.hpp"
@@ -22,13 +23,11 @@
 
 #include "base/cancellable.hpp"
 #include "base/logging.hpp"
-#include "base/stl_helpers.hpp"
 #include "base/string_utils.hpp"
 
 #include <algorithm>
 #include <limits>
 #include <memory>
-#include <unordered_map>
 #include <vector>
 
 class DataSource;
@@ -400,15 +399,16 @@ private:
     uint32_t const placeId = parent.m_sortedFeatures->front();
     auto const & ids = GetPlaceAddrFeatures(placeId, parent.m_getFeatures);
 
-    if (!child.m_hasDelayedFeatures || !buildings.empty())
+    if (!buildings.empty())
     {
       for (uint32_t houseId : buildings)
       {
         if (std::binary_search(ids.begin(), ids.end(), houseId))
           fn(houseId, placeId);
       }
-      return;
     }
+    if (!child.m_hasDelayedFeatures)
+      return;
 
     std::vector<house_numbers::Token> queryParse;
     ParseQuery(child.m_subQuery, child.m_lastTokenIsPrefix, queryParse);

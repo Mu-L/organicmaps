@@ -4,6 +4,7 @@
 #include "indexer/ftypes_matcher.hpp"
 #include "indexer/postcodes_matcher.hpp"
 #include "indexer/validate_and_format_contacts.hpp"
+#include "indexer/edit_journal.hpp"
 
 #include "platform/preferred_languages.hpp"
 
@@ -24,8 +25,7 @@ namespace
 bool ExtractName(StringUtf8Multilang const & names, int8_t const langCode,
                  vector<osm::LocalizedName> & result)
 {
-  if (StringUtf8Multilang::kUnsupportedLanguageCode == langCode ||
-      StringUtf8Multilang::kDefaultCode == langCode)
+  if (StringUtf8Multilang::kUnsupportedLanguageCode == langCode)
   {
     return false;
   }
@@ -44,113 +44,6 @@ bool ExtractName(StringUtf8Multilang const & names, int8_t const langCode,
   result.emplace_back(langCode, name);
 
   return true;
-}
-
-size_t PushMwmLanguages(StringUtf8Multilang const & names, vector<int8_t> const & mwmLanguages,
-                        vector<osm::LocalizedName> & result)
-{
-  size_t count = 0;
-  static size_t const kMaxCountMwmLanguages = 2;
-
-  for (size_t i = 0; i < mwmLanguages.size() && count < kMaxCountMwmLanguages; ++i)
-  {
-    if (ExtractName(names, mwmLanguages[i], result))
-      ++count;
-  }
-
-  return count;
-}
-
-osm::FakeNames MakeFakeSource(StringUtf8Multilang const & source,
-                              vector<int8_t> const & mwmLanguages, StringUtf8Multilang & fakeSource)
-{
-  string_view defaultName;
-  // Fake names works for mono language (official) speaking countries-only.
-  if (mwmLanguages.size() != 1 || !source.GetString(StringUtf8Multilang::kDefaultCode, defaultName))
-    return {};
-
-  osm::FakeNames fakeNames;
-  fakeSource = source;
-
-  // Mwm name has higher priority then English name.
-  for (auto const code : {mwmLanguages.front(), StringUtf8Multilang::kEnglishCode})
-  {
-    string_view tempName;
-    if (!source.GetString(code, tempName))
-    {
-      tempName = defaultName;
-      fakeSource.AddString(code, defaultName);
-    }
-    fakeNames.m_names.emplace_back(code, std::string(tempName));
-  }
-
-  fakeNames.m_defaultName = defaultName;
-  return fakeNames;
-}
-
-// Tries to set default name from the localized name. Returns false when there's no such localized name.
-bool TryToFillDefaultNameFromCode(int8_t const code, StringUtf8Multilang & names)
-{
-  string_view newDefaultName;
-  if (code != StringUtf8Multilang::kUnsupportedLanguageCode)
-    names.GetString(code, newDefaultName);
-
-  // Default name can not be empty.
-  if (!newDefaultName.empty())
-  {
-    names.AddString(StringUtf8Multilang::kDefaultCode, newDefaultName);
-    return true;
-  }
-
-  return false;
-}
-
-// Tries to set default name to any non-empty localized name.
-// This is the case when fake names were cleared.
-void TryToFillDefaultNameFromAnyLanguage(StringUtf8Multilang & names)
-{
-  names.ForEach([&names](int8_t langCode, string_view name)
-  {
-    if (name.empty() || langCode == StringUtf8Multilang::kDefaultCode)
-      return base::ControlFlow::Continue;
-
-    names.AddString(StringUtf8Multilang::kDefaultCode, name);
-    return base::ControlFlow::Break;
-  });
-}
-
-void RemoveFakesFromName(osm::FakeNames const & fakeNames, StringUtf8Multilang & name)
-{
-  vector<int8_t> codesToExclude;
-  string_view defaultName;
-  name.GetString(StringUtf8Multilang::kDefaultCode, defaultName);
-
-  for (auto const & item : fakeNames.m_names)
-  {
-    string_view tempName;
-    if (!name.GetString(item.m_code, tempName))
-      continue;
-
-    // No need to save in case when name is empty, duplicate of default name or was not changed.
-    if (tempName.empty() || tempName == defaultName ||
-        (tempName == item.m_filledName && tempName == fakeNames.m_defaultName))
-    {
-      codesToExclude.push_back(item.m_code);
-    }
-  }
-
-  if (codesToExclude.empty())
-    return;
-
-  StringUtf8Multilang nameWithoutFakes;
-  name.ForEach([&codesToExclude, &nameWithoutFakes](int8_t langCode, string_view value)
-  {
-    auto const it = find(codesToExclude.begin(), codesToExclude.end(), langCode);
-    if (it == codesToExclude.end())
-      nameWithoutFakes.AddString(langCode, value);
-  });
-
-  name = nameWithoutFakes;
 }
 }  // namespace
 
@@ -193,7 +86,7 @@ vector<MapObject::MetadataID> EditableMapObject::GetEditableProperties() const
   return props;
 }
 
-NamesDataSource EditableMapObject::GetNamesDataSource(bool needFakes /* = true */)
+NamesDataSource EditableMapObject::GetNamesDataSource()
 {
   auto const mwmInfo = GetID().m_mwmId.GetInfo();
 
@@ -203,20 +96,7 @@ NamesDataSource EditableMapObject::GetNamesDataSource(bool needFakes /* = true *
   vector<int8_t> mwmLanguages;
   mwmInfo->GetRegionData().GetLanguages(mwmLanguages);
 
-  auto const userLangCode = StringUtf8Multilang::GetLangIndex(languages::GetCurrentNorm());
-
-  if (needFakes)
-  {
-    StringUtf8Multilang fakeSource;
-    m_fakeNames = MakeFakeSource(m_name, mwmLanguages, fakeSource);
-
-    if (!m_fakeNames.m_names.empty())
-      return GetNamesDataSource(fakeSource, mwmLanguages, userLangCode);
-  }
-  else
-  {
-    RemoveFakeNames(m_fakeNames, m_name);
-  }
+  auto const userLangCode = StringUtf8Multilang::GetLangIndex(languages::GetCurrentMapLanguage());
 
   return GetNamesDataSource(m_name, mwmLanguages, userLangCode);
 }
@@ -229,24 +109,14 @@ NamesDataSource EditableMapObject::GetNamesDataSource(StringUtf8Multilang const 
   NamesDataSource result;
   auto & names = result.names;
   auto & mandatoryCount = result.mandatoryNamesCount;
-  // Push Mwm languages.
-  mandatoryCount = PushMwmLanguages(source, mwmLanguages, names);
 
-  // Push english name.
-  if (ExtractName(source, StringUtf8Multilang::kEnglishCode, names))
-    ++mandatoryCount;
-
-  // Push user's language.
-  if (ExtractName(source, userLangCode, names))
+  // Push default/native for country language.
+  if (ExtractName(source, StringUtf8Multilang::kDefaultCode, names))
     ++mandatoryCount;
 
   // Push other languages.
   source.ForEach([&names, mandatoryCount](int8_t const code, string_view name)
   {
-    // Exclude default name.
-    if (StringUtf8Multilang::kDefaultCode == code)
-      return;
-
     auto const mandatoryNamesEnd = names.begin() + mandatoryCount;
     // Exclude languages which are already in container (languages with top priority).
     auto const it = find_if(
@@ -286,6 +156,7 @@ void EditableMapObject::ForEachMetadataItem(function<void(string_view tag, strin
     case MetadataID::FMD_PRICE_RATES:
     case MetadataID::FMD_RATINGS:
     case MetadataID::FMD_EXTERNAL_URI:
+    case MetadataID::FMD_WHEELCHAIR:    // Value is runtime only, data is taken from the classificator types, should not be used to update the OSM database
       break;
     default: fn(ToString(type), value); break;
     }
@@ -307,30 +178,6 @@ void EditableMapObject::SetName(StringUtf8Multilang const & name) { m_name = nam
 void EditableMapObject::SetName(string_view name, int8_t langCode)
 {
   strings::Trim(name);
-
-  if (m_namesAdvancedMode)
-  {
-    m_name.AddString(langCode, name);
-    return;
-  }
-
-  if (!name.empty() && !m_name.HasString(StringUtf8Multilang::kDefaultCode))
-  {
-    const auto mwmInfo = GetID().m_mwmId.GetInfo();
-
-    if (mwmInfo)
-    {
-      vector<int8_t> mwmLanguages;
-      mwmInfo->GetRegionData().GetLanguages(mwmLanguages);
-
-      if (CanUseAsDefaultName(langCode, mwmLanguages))
-      {
-        m_name.AddString(StringUtf8Multilang::kDefaultCode, name);
-        return;
-      }
-    }
-  }
-
   m_name.AddString(langCode, name);
 }
 
@@ -347,43 +194,6 @@ bool EditableMapObject::CanUseAsDefaultName(int8_t const lang, vector<int8_t> co
   }
 
   return false;
-}
-
-// static
-void EditableMapObject::RemoveFakeNames(FakeNames const & fakeNames, StringUtf8Multilang & name)
-{
-  if (fakeNames.m_names.empty())
-    return;
-
-  int8_t newDefaultNameCode = StringUtf8Multilang::kUnsupportedLanguageCode;
-  size_t changedCount = 0;
-  string_view defaultName;
-  name.GetString(StringUtf8Multilang::kDefaultCode, defaultName);
-
-  // New default name calculation priority: 1. name on mwm language, 2. english name.
-  for (auto it = fakeNames.m_names.rbegin(); it != fakeNames.m_names.rend(); ++it)
-  {
-    string_view tempName;
-    if (!name.GetString(it->m_code, tempName))
-      continue;
-
-    if (tempName != it->m_filledName)
-    {
-      if (!tempName.empty())
-        newDefaultNameCode = it->m_code;
-
-      ++changedCount;
-    }
-  }
-
-  // If all previously filled fake names were changed - try to change the default name.
-  if (changedCount == fakeNames.m_names.size())
-  {
-    if (!TryToFillDefaultNameFromCode(newDefaultNameCode, name))
-      TryToFillDefaultNameFromAnyLanguage(name);
-  }
-
-  RemoveFakesFromName(fakeNames, name);
 }
 
 void EditableMapObject::SetMercator(m2::PointD const & center) { m_mercator = center; }
@@ -433,6 +243,7 @@ bool EditableMapObject::IsValidMetadata(MetadataID type, std::string const & val
   switch (type)
   {
   case MetadataID::FMD_WEBSITE: return ValidateWebsite(value);
+  case MetadataID::FMD_WEBSITE_MENU: return ValidateWebsite(value);
   case MetadataID::FMD_CONTACT_FACEBOOK: return ValidateFacebookPage(value);
   case MetadataID::FMD_CONTACT_INSTAGRAM: return ValidateInstagramPage(value);
   case MetadataID::FMD_CONTACT_TWITTER: return ValidateTwitterPage(value);
@@ -467,6 +278,7 @@ void EditableMapObject::SetMetadata(MetadataID type, std::string value)
   switch (type)
   {
   case MetadataID::FMD_WEBSITE: value = ValidateAndFormat_website(value); break;
+  case MetadataID::FMD_WEBSITE_MENU: value = ValidateAndFormat_website(value); break;
   case MetadataID::FMD_CONTACT_FACEBOOK: value = ValidateAndFormat_facebook(value); break;
   case MetadataID::FMD_CONTACT_INSTAGRAM: value = ValidateAndFormat_instagram(value); break;
   case MetadataID::FMD_CONTACT_TWITTER: value = ValidateAndFormat_twitter(value); break;
@@ -503,7 +315,7 @@ void EditableMapObject::SetInternet(feature::Internet internet)
   if (hasWiFi && internet != feature::Internet::Wlan)
     m_types.Remove(wifiType);
   else if (!hasWiFi && internet == feature::Internet::Wlan)
-    m_types.Add(wifiType);
+    m_types.SafeAdd(wifiType);
 }
 
 LocalizedStreet const & EditableMapObject::GetStreet() const { return m_street; }
@@ -543,28 +355,17 @@ void EditableMapObject::SetCuisines(std::vector<std::string> const & cuisines)
 
 void EditableMapObject::SetPointType() { m_geomType = feature::GeomType::Point; }
 
-void EditableMapObject::RemoveBlankAndDuplicationsForDefault()
+void EditableMapObject::RemoveBlankNames()
 {
   StringUtf8Multilang editedName;
-  string_view defaultName;
-  m_name.GetString(StringUtf8Multilang::kDefaultCode, defaultName);
 
-  m_name.ForEach([&defaultName, &editedName](int8_t langCode, string_view name)
+  m_name.ForEach([&editedName](int8_t langCode, string_view name)
   {
-    auto const duplicate = langCode != StringUtf8Multilang::kDefaultCode && defaultName == name;
-    if (!name.empty() && !duplicate)
+    if (!name.empty())
       editedName.AddString(langCode, name);
   });
 
   m_name = editedName;
-}
-
-void EditableMapObject::RemoveNeedlessNames()
-{
-  if (!IsNamesAdvancedModeEnabled())
-    RemoveFakeNames(m_fakeNames, m_name);
-
-  RemoveBlankAndDuplicationsForDefault();
 }
 
 // static
@@ -730,7 +531,7 @@ bool EditableMapObject::ValidateLevel(string const & level)
     return false;
 
   // Allowing only half-levels.
-  if (level.find('.') != string::npos && !strings::EndsWith(level, ".5"))
+  if (level.find('.') != string::npos && !level.ends_with(".5"))
     return false;
 
   // Forbid "04" and "0.".
@@ -776,6 +577,215 @@ bool EditableMapObject::ValidateName(string const & name)
       return false;
   }
   return true;
+}
+
+EditJournal const & EditableMapObject::GetJournal() const
+{
+  return m_journal;
+}
+
+void EditableMapObject::SetJournal(EditJournal && editJournal)
+{
+  m_journal = std::move(editJournal);
+}
+
+EditingLifecycle EditableMapObject::GetEditingLifecycle() const
+{
+  return m_journal.GetEditingLifecycle();
+}
+
+void EditableMapObject::MarkAsCreated(uint32_t type, feature::GeomType geomType, m2::PointD mercator)
+{
+  m_journal.MarkAsCreated(type, geomType, std::move(mercator));
+}
+
+void EditableMapObject::ClearJournal()
+{
+  m_journal.Clear();
+}
+
+void EditableMapObject::ApplyEditsFromJournal(EditJournal const & editJournal)
+{
+  for (JournalEntry const & entry : editJournal.GetJournalHistory())
+    ApplyJournalEntry(entry);
+
+  for (JournalEntry const & entry : editJournal.GetJournal())
+    ApplyJournalEntry(entry);
+}
+
+void EditableMapObject::ApplyJournalEntry(JournalEntry const & entry)
+{
+  LOG(LDEBUG, ("Applying Journal Entry: ", osm::EditJournal::ToString(entry)));
+  //Todo
+  switch (entry.journalEntryType)
+  {
+    case JournalEntryType::TagModification:
+    {
+      TagModData const & tagModData = std::get<TagModData>(entry.data);
+
+      //Metadata
+      MetadataID type;
+      if (feature::Metadata::TypeFromString(tagModData.key, type))
+      {
+        m_metadata.Set(type, tagModData.new_value);
+        if (type == MetadataID::FMD_INTERNET)
+        {
+          uint32_t const wifiType = ftypes::IsWifiChecker::Instance().GetType();
+          if (tagModData.new_value == "wifi")
+            m_types.SafeAdd(wifiType);
+          else
+            m_types.Remove(wifiType);
+        }
+        break;
+      }
+
+      //Names
+      int8_t langCode = StringUtf8Multilang::GetCodeByOSMTag(tagModData.key);
+      if (langCode != StringUtf8Multilang::kUnsupportedLanguageCode)
+      {
+        m_name.AddString(langCode, tagModData.new_value);
+        break;
+      }
+
+      if (tagModData.key == "addr:street")
+        m_street.m_defaultName = tagModData.new_value;
+
+      else if (tagModData.key == "addr:housenumber")
+        m_houseNumber = tagModData.new_value;
+
+      else if (tagModData.key == "cuisine")
+      {
+        Classificator const & cl = classif();
+        // Remove old cuisine values
+        vector<std::string_view> oldCuisines = strings::Tokenize(tagModData.old_value, ";");
+        for (std::string_view const & cuisine : oldCuisines)
+          m_types.Remove(cl.GetTypeByPath({string_view("cuisine"), cuisine}));
+        // Add new cuisine values
+        vector<std::string_view> newCuisines = strings::Tokenize(tagModData.new_value, ";");
+        for (std::string_view const & cuisine : newCuisines)
+          m_types.SafeAdd(cl.GetTypeByPath({string_view("cuisine"), cuisine}));
+      }
+      else if (tagModData.key == "diet:vegetarian")
+      {
+        Classificator const & cl = classif();
+        uint32_t const vegetarianType = cl.GetTypeByPath({string_view("cuisine"), "vegetarian"});
+        if (tagModData.new_value == "yes")
+          m_types.SafeAdd(vegetarianType);
+        else
+          m_types.Remove(vegetarianType);
+      }
+      else if (tagModData.key == "diet:vegan")
+      {
+        Classificator const & cl = classif();
+        uint32_t const veganType = cl.GetTypeByPath({string_view("cuisine"), "vegan"});
+        if (tagModData.new_value == "yes")
+          m_types.SafeAdd(veganType);
+        else
+          m_types.Remove(veganType);
+      }
+      else
+        LOG(LWARNING, ("OSM key \"" , tagModData.key, "\" is unknown, skipped"));
+
+      break;
+    }
+    case JournalEntryType::ObjectCreated:
+    {
+      ObjCreateData const & objCreatedData = std::get<ObjCreateData>(entry.data);
+      ASSERT_EQUAL(feature::GeomType::Point, objCreatedData.geomType, ("At the moment only new nodes (points) can be created."));
+      SetPointType();
+      SetMercator(objCreatedData.mercator);
+      m_types.Add(objCreatedData.type);
+      break;
+    }
+    case JournalEntryType::LegacyObject:
+    {
+      ASSERT_FAIL(("Legacy Objects can not be loaded from Journal"));
+      break;
+    }
+  }
+}
+
+void EditableMapObject::LogDiffInJournal(EditableMapObject const & unedited_emo)
+{
+  LOG(LDEBUG, ("Executing LogDiffInJournal"));
+
+  // Name
+  for (StringUtf8Multilang::Lang language : StringUtf8Multilang::GetSupportedLanguages())
+  {
+    int8_t langCode = StringUtf8Multilang::GetLangIndex(language.m_code);
+    std::string_view new_name;
+    std::string_view old_name;
+    m_name.GetString(langCode, new_name);
+    unedited_emo.GetNameMultilang().GetString(langCode, old_name);
+
+    if (new_name != old_name)
+    {
+      std::string osmLangName = StringUtf8Multilang::GetOSMTagByCode(langCode);
+      m_journal.AddTagChange(std::move(osmLangName), std::string(old_name), std::string(new_name));
+    }
+  }
+
+  // Address
+  if (m_street.m_defaultName != unedited_emo.GetStreet().m_defaultName)
+    m_journal.AddTagChange("addr:street", unedited_emo.GetStreet().m_defaultName, m_street.m_defaultName);
+
+  if (m_houseNumber != unedited_emo.GetHouseNumber())
+    m_journal.AddTagChange("addr:housenumber", unedited_emo.GetHouseNumber(), m_houseNumber);
+
+  // Metadata
+  for (uint8_t i = 0; i < static_cast<uint8_t>(feature::Metadata::FMD_COUNT); ++i)
+  {
+    auto const type = static_cast<feature::Metadata::EType>(i);
+    std::string_view const & value = GetMetadata(type);
+    std::string_view const & old_value = unedited_emo.GetMetadata(type);
+
+    if (value != old_value)
+      m_journal.AddTagChange(ToString(type), std::string(old_value), std::string(value));
+  }
+
+  // cuisine and diet
+  std::vector<std::string> new_cuisines = GetCuisines();
+  std::vector<std::string> old_cuisines = unedited_emo.GetCuisines();
+
+  auto const findAndErase = [] (std::vector<std::string> & cuisinesPtr, std::string_view s)
+  {
+    auto it = std::find(cuisinesPtr.begin(), cuisinesPtr.end(), s);
+    if (it != cuisinesPtr.end())
+    {
+      cuisinesPtr.erase(it);
+      return "yes";
+    }
+    return "";
+  };
+
+  std::string new_vegetarian = findAndErase(new_cuisines, "vegetarian");
+  std::string old_vegetarian = findAndErase(old_cuisines, "vegetarian");
+  if (new_vegetarian != old_vegetarian)
+    m_journal.AddTagChange("diet:vegetarian", old_vegetarian, new_vegetarian);
+
+  std::string new_vegan = findAndErase(new_cuisines, "vegan");
+  std::string old_vegan = findAndErase(old_cuisines, "vegan");
+  if (new_vegan != old_vegan)
+    m_journal.AddTagChange("diet:vegan", old_vegan, new_vegan);
+
+  bool cuisinesModified = false;
+
+  if (new_cuisines.size() != old_cuisines.size())
+    cuisinesModified = true;
+  else
+  {
+    for (auto const & new_cuisine : new_cuisines)
+    {
+      if (!base::IsExist(old_cuisines, new_cuisine))
+      {
+        cuisinesModified = true;
+        break;
+      }
+    }
+  }
+
+  if (cuisinesModified)
+    m_journal.AddTagChange("cuisine", strings::JoinStrings(old_cuisines, ";"), strings::JoinStrings(new_cuisines, ";"));
 }
 
 bool AreObjectsEqualIgnoringStreet(EditableMapObject const & lhs, EditableMapObject const & rhs)

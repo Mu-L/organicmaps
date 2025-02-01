@@ -18,14 +18,13 @@
   <string name="pref_map_style" translatable="false">MapStyle</string>
   <string name="pref_tts_screen" translatable="false">TtsScreen</string>
   <string name="pref_tts_enabled" translatable="false">TtsEnabled</string>
+  <string name="pref_tts_street_names" translatable="false">TtsStreetNames</string>
   <string name="pref_tts_language" translatable="false">TtsLanguage</string>
   <string name="pref_tts_volume" translatable="false">TtsVolume</string>
   <string name="pref_tts_test_voice" translatable="false">TtsTestVoice</string>
   <string name="pref_tts_info" translatable="false">TtsInfo</string>
   <string name="pref_tts_info_link" translatable="false">TtsInfoLink</string>
   <string name="pref_tts_speed_cameras" translatable="false">SpeedCameras</string>
-  <!-- TODO: Move to another domain. -->
-  <string name="tts_info_link" translatable="false">https://mapsme.zendesk.com/hc/en-us/articles/208628985-How-can-I-check-TTS-settings-on-my-Android-device-</string>
   <string name="prefs_routing" translatable="false">RoutingOptions</string>
   <string name="pref_autodownload" translatable="false">AutoDownloadMap</string>
   <string name="pref_3d" translatable="false">3D</string>
@@ -41,6 +40,7 @@
   <string name="pref_power_management" translatable="false">PowerManagment</string>
   <string name="pref_keep_screen_on" translatable="false">KeepScreenOn</string>
   <string name="pref_show_on_lock_screen" translatable="false">ShowOnLockScreen</string>
+  <string name="pref_map_locale" translatable="false">MapLanguage</string>
 
   <string name="notification_ticker_ltr" translatable="false">%1$s: %2$s</string>
   <string name="notification_ticker_rtl" translatable="false">%2$s :%1$s</string>
@@ -52,6 +52,7 @@
   <string name="theme_default" translatable="false">default</string>
   <string name="theme_night" translatable="false">night</string>
   <string name="theme_auto" translatable="false">auto</string>
+  <string name="theme_nav_auto" translatable="false">nav-auto</string>
 
   <!-- Tags -->
   <string name="tag_menu_collapse" translatable="false">collapse</string>
@@ -59,9 +60,12 @@
 
   <string name="pref_privacy" translatable="false">pref_privacy</string>
   <string name="pref_search_history" translatable="false">pref_search_history</string>
+  <string name="pref_display_kayak" translatable="false">DisplayKayak</string>
   <string name="never_enum_value" translatable="false">NEVER</string>
   <string name="always_enum_value" translatable="false">ALWAYS</string>
   <string name="auto_enum_value" translatable="false">AUTO</string>
+
   <string name="placepage_behavior" translatable="false">com.google.android.material.bottomsheet.BottomSheetBehavior</string>
-  <string name="car_notification_channel_name" translatable="false">CAR_NOTIFICATION_CHANNEL</string>
+
+  <string name="car_notification_channel_name" translatable="false">Car</string>
 </resources>

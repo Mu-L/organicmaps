@@ -7,6 +7,7 @@
 
 #import <AudioToolbox/AudioServices.h>
 #import <CoreApi/Framework.h>
+#import <CoreApi/DurationFormatter.h>
 
 #include "routing/following_info.hpp"
 #include "routing/turns.hpp"
@@ -121,9 +122,9 @@ NSArray<MWMRouterTransitStepInfo *> *buildRouteTransitSteps(NSArray<MWMRoutePoin
 - (NSString *)arrival
 {
   auto arrivalDate = [[NSDate date] dateByAddingTimeInterval:self.timeToTarget];
-  return [NSDateFormatter localizedStringFromDate:arrivalDate
-                                        dateStyle:NSDateFormatterNoStyle
-                                        timeStyle:NSDateFormatterShortStyle];
+  return [DateTimeFormatter dateStringFrom:arrivalDate
+                                 dateStyle:NSDateFormatterNoStyle
+                                 timeStyle:NSDateFormatterShortStyle];
 }
 
 + (NSAttributedString *)estimateDot
@@ -141,7 +142,7 @@ NSArray<MWMRouterTransitStepInfo *> *buildRouteTransitSteps(NSArray<MWMRoutePoin
 
   auto result = [[NSMutableAttributedString alloc] initWithString:@""];
   if (self.showEta) {
-    NSString * eta = [NSDateComponentsFormatter etaStringFrom:self.timeToTarget];
+    NSString * eta = [DurationFormatter durationStringFromTimeInterval:self.timeToTarget];
     [result appendAttributedString:[[NSMutableAttributedString alloc] initWithString:eta attributes:primaryAttributes]];
     [result appendAttributedString:MWMNavigationDashboardEntity.estimateDot];
   }
@@ -205,7 +206,7 @@ NSArray<MWMRouterTransitStepInfo *> *buildRouteTransitSteps(NSArray<MWMRoutePoin
     entity.progress = info.m_completionPercent;
     entity.distanceToTurn = @(info.m_distToTurn.GetDistanceString().c_str());
     entity.turnUnits = @(info.m_distToTurn.GetUnitsString().c_str());
-    entity.streetName = @(info.m_displayedStreetName.c_str());
+    entity.streetName = @(info.m_nextStreetName.c_str());
     entity.speedLimitMps = info.m_speedLimitMps;
 
     entity.isWalk = NO;
@@ -237,6 +238,9 @@ NSArray<MWMRouterTransitStepInfo *> *buildRouteTransitSteps(NSArray<MWMRoutePoin
 
 - (void)updateTransitInfo:(TransitRouteInfo const &)info {
   if (auto entity = self.entity) {
+    entity.timeToTarget = info.m_totalTimeInSec;
+    entity.targetDistance = @(info.m_totalPedestrianDistanceStr.c_str());
+    entity.targetUnits = @(info.m_totalPedestrianUnitsSuffix.c_str());
     entity.isValid = YES;
     entity.isWalk = YES;
     entity.showEta = YES;

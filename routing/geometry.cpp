@@ -53,19 +53,11 @@ class RoadAttrsGetter
 public:
   void Load(FilesContainerR const & cont)
   {
-    try
-    {
-      if (cont.IsExist(CITY_ROADS_FILE_TAG))
-        m_cityRoads.Load(cont.GetReader(CITY_ROADS_FILE_TAG));
+    if (cont.IsExist(CITY_ROADS_FILE_TAG))
+      m_cityRoads.Load(cont.GetReader(CITY_ROADS_FILE_TAG));
 
-      if (cont.IsExist(MAXSPEEDS_FILE_TAG))
-        m_maxSpeeds.Load(cont.GetReader(MAXSPEEDS_FILE_TAG));
-    }
-    catch (Reader::Exception const & e)
-    {
-      LOG(LERROR, ("File", cont.GetFileName(), "Error while reading", CITY_ROADS_FILE_TAG, "or",
-                   MAXSPEEDS_FILE_TAG, "section.", e.Msg()));
-    }
+    if (cont.IsExist(MAXSPEEDS_FILE_TAG))
+      m_maxSpeeds.Load(cont.GetReader(MAXSPEEDS_FILE_TAG));
   }
 
 public:
@@ -206,12 +198,13 @@ void RoadGeometry::Load(VehicleModelInterface const & vehicleModel, FeatureType 
       // Since we store integer altitudes, 1 is a possible error for 2 points.
       geometry::Altitude constexpr kError = 1;
 
-      auto const altDiff = abs((*altitudes)[i] - (*altitudes)[i-1]);
-      if (altDiff > kError)
+      auto const altDiff = (*altitudes)[i] - (*altitudes)[i-1];
+      auto const absDiff = abs(altDiff) - kError;
+      if (absDiff > 0)
       {
         double const dist = ms::DistanceOnEarth(m_junctions[i-1].GetLatLon(), m_junctions[i].GetLatLon());
-        if ((altDiff - kError) / dist > 0.3)
-          LOG(LWARNING, ("Altitudes jump:", m_junctions[i-1], m_junctions[i]));
+        if (absDiff / dist >= 1.0)
+          LOG(LWARNING, ("Altitudes jump:", altDiff, "/", dist, m_junctions[i-1], m_junctions[i]));
       }
     }
 #endif

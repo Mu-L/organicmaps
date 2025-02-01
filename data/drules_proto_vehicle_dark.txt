@@ -4960,6 +4960,94 @@ cont {
   }
 }
 cont {
+  name: "amenity-pub"
+  element {
+    scale: 16
+    symbol {
+      name: "pub-m"
+      priority: 750
+      min_distance: 22
+    }
+    caption {
+      primary {
+        height: 12
+        color: 6710886
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9250
+    }
+  }
+  element {
+    scale: 17
+    symbol {
+      name: "pub-m"
+      priority: 750
+      min_distance: 22
+    }
+    caption {
+      primary {
+        height: 13
+        color: 6710886
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9250
+    }
+  }
+  element {
+    scale: 18
+    symbol {
+      name: "pub-m"
+      priority: 750
+      min_distance: 25
+    }
+    caption {
+      primary {
+        height: 14
+        color: 6710886
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9250
+    }
+  }
+  element {
+    scale: 19
+    symbol {
+      name: "pub-m"
+      priority: 750
+      min_distance: 40
+    }
+    caption {
+      primary {
+        height: 14
+        color: 6710886
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9250
+    }
+  }
+  element {
+    scale: 20
+    symbol {
+      name: "pub-m"
+      priority: 750
+      min_distance: 40
+    }
+    caption {
+      primary {
+        height: 14
+        color: 6710886
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9250
+    }
+  }
+}
+cont {
   name: "amenity-restaurant"
   element {
     scale: 16
@@ -5637,6 +5725,33 @@ cont {
     scale: 20
     symbol {
       name: "drinking-water-m"
+      priority: 550
+      min_distance: 20
+    }
+  }
+}
+cont {
+  name: "amenity-water_point-drinking_water_no"
+  element {
+    scale: 18
+    symbol {
+      name: "drinking-water-no-m"
+      priority: 550
+      min_distance: 20
+    }
+  }
+  element {
+    scale: 19
+    symbol {
+      name: "drinking-water-no-m"
+      priority: 550
+      min_distance: 20
+    }
+  }
+  element {
+    scale: 20
+    symbol {
+      name: "drinking-water-no-m"
       priority: 550
       min_distance: 20
     }
@@ -8568,6 +8683,57 @@ cont {
   }
 }
 cont {
+  name: "emergency-emergency_ward_entrance"
+  element {
+    scale: 18
+    symbol {
+      name: "entrance-emergency-s"
+      priority: 500
+    }
+    caption {
+      primary {
+        height: 13
+        color: 7566195
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9500
+    }
+  }
+  element {
+    scale: 19
+    symbol {
+      name: "entrance-emergency-s"
+      priority: 500
+    }
+    caption {
+      primary {
+        height: 13
+        color: 7566195
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9500
+    }
+  }
+  element {
+    scale: 20
+    symbol {
+      name: "entrance-emergency-s"
+      priority: 500
+    }
+    caption {
+      primary {
+        height: 13
+        color: 7566195
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9500
+    }
+  }
+}
+cont {
   name: "entrance"
   element {
     scale: 19
@@ -8619,7 +8785,7 @@ cont {
   element {
     scale: 19
     symbol {
-      name: "exit-s"
+      name: "entrance-exit-s"
       priority: -10000
     }
     caption {
@@ -8641,7 +8807,7 @@ cont {
   element {
     scale: 20
     symbol {
-      name: "exit-s"
+      name: "entrance-exit-s"
       priority: -10000
     }
     caption {
@@ -8666,7 +8832,7 @@ cont {
   element {
     scale: 18
     symbol {
-      name: "main_entrance-s"
+      name: "entrance-main-s"
       priority: 20
     }
     caption {
@@ -8688,7 +8854,7 @@ cont {
   element {
     scale: 19
     symbol {
-      name: "main_entrance-s"
+      name: "entrance-main-s"
       priority: 20
     }
     caption {
@@ -8710,7 +8876,7 @@ cont {
   element {
     scale: 20
     symbol {
-      name: "main_entrance-s"
+      name: "entrance-main-s"
       priority: 20
     }
     caption {
@@ -9004,26 +9170,14 @@ cont {
   }
 }
 cont {
-  name: "highway-footway-alpine_hiking"
-  element {
-    scale: 17
-    lines {
-      width: 0.9
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
+  name: "highway-footway-area"
   element {
     scale: 18
     lines {
-      width: 1.1
-      color: 1720994322
+      width: 1.5
+      color: 1294673959
       dashdot {
-        dd: 3.5
+        dd: 5.0
         dd: 2.0
       }
       priority: 130
@@ -9033,10 +9187,10 @@ cont {
     scale: 19
     lines {
       width: 1.5
-      color: 1720994322
+      color: 1294673959
       dashdot {
-        dd: 4.0
-        dd: 2.5
+        dd: 5.0
+        dd: 2.0
       }
       priority: 130
     }
@@ -9045,17 +9199,17 @@ cont {
     scale: 20
     lines {
       width: 1.5
-      color: 1720994322
+      color: 1294673959
       dashdot {
-        dd: 4.0
-        dd: 2.5
+        dd: 5.0
+        dd: 2.0
       }
       priority: 130
     }
   }
 }
 cont {
-  name: "highway-footway-area"
+  name: "highway-footway-bicycle"
   element {
     scale: 18
     lines {
@@ -9168,261 +9322,6 @@ cont {
         dd: 2.0
       }
       priority: 245
-    }
-  }
-}
-cont {
-  name: "highway-footway-demanding_alpine_hiking"
-  element {
-    scale: 17
-    lines {
-      width: 0.9
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 1.1
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-}
-cont {
-  name: "highway-footway-demanding_mountain_hiking"
-  element {
-    scale: 17
-    lines {
-      width: 0.9
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 1.1
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-}
-cont {
-  name: "highway-footway-difficult_alpine_hiking"
-  element {
-    scale: 17
-    lines {
-      width: 0.9
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 1.1
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-}
-cont {
-  name: "highway-footway-hiking"
-  element {
-    scale: 17
-    lines {
-      width: 0.9
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 1.1
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-}
-cont {
-  name: "highway-footway-mountain_hiking"
-  element {
-    scale: 17
-    lines {
-      width: 0.9
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 1.1
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
     }
   }
 }
@@ -9973,6 +9872,16 @@ cont {
 cont {
   name: "highway-motorway"
   element {
+    scale: 6
+    lines {
+      width: 0.9
+      color: 3008113177
+      priority: 250
+      join: BEVELJOIN
+      cap: BUTTCAP
+    }
+  }
+  element {
     scale: 7
     lines {
       width: 1.05
@@ -10320,6 +10229,16 @@ cont {
 }
 cont {
   name: "highway-motorway-bridge"
+  element {
+    scale: 6
+    lines {
+      width: 0.9
+      color: 3008113177
+      priority: 250
+      join: BEVELJOIN
+      cap: BUTTCAP
+    }
+  }
   element {
     scale: 7
     lines {
@@ -10764,6 +10683,16 @@ cont {
 }
 cont {
   name: "highway-motorway-tunnel"
+  element {
+    scale: 6
+    lines {
+      width: 0.9
+      color: 3008113177
+      priority: 250
+      join: BEVELJOIN
+      cap: BUTTCAP
+    }
+  }
   element {
     scale: 7
     lines {
@@ -12349,57 +12278,6 @@ cont {
   }
 }
 cont {
-  name: "highway-path-alpine_hiking"
-  element {
-    scale: 17
-    lines {
-      width: 0.9
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 1.1
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-}
-cont {
   name: "highway-path-bicycle"
   element {
     scale: 17
@@ -12502,7 +12380,7 @@ cont {
   }
 }
 cont {
-  name: "highway-path-demanding_alpine_hiking"
+  name: "highway-path-difficult"
   element {
     scale: 17
     lines {
@@ -12553,109 +12431,7 @@ cont {
   }
 }
 cont {
-  name: "highway-path-demanding_mountain_hiking"
-  element {
-    scale: 17
-    lines {
-      width: 0.9
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 1.1
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-}
-cont {
-  name: "highway-path-difficult_alpine_hiking"
-  element {
-    scale: 17
-    lines {
-      width: 0.9
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 1.1
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-}
-cont {
-  name: "highway-path-hiking"
+  name: "highway-path-expert"
   element {
     scale: 17
     lines {
@@ -12707,57 +12483,6 @@ cont {
 }
 cont {
   name: "highway-path-horse"
-  element {
-    scale: 17
-    lines {
-      width: 0.9
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 1.1
-      color: 1720994322
-      dashdot {
-        dd: 3.5
-        dd: 2.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 1.5
-      color: 1720994322
-      dashdot {
-        dd: 4.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-}
-cont {
-  name: "highway-path-mountain_hiking"
   element {
     scale: 17
     lines {
@@ -20604,347 +20329,6 @@ cont {
   }
 }
 cont {
-  name: "highway-track-grade1"
-  element {
-    scale: 14
-    lines {
-      width: 1.4
-      color: 1296910148
-      dashdot {
-        dd: 2.0
-        dd: 1.35
-      }
-      priority: 130
-      cap: BUTTCAP
-    }
-  }
-  element {
-    scale: 15
-    lines {
-      width: 2.0
-      color: 1296910148
-      dashdot {
-        dd: 2.2
-        dd: 1.26
-      }
-      priority: 130
-      cap: BUTTCAP
-    }
-  }
-  element {
-    scale: 16
-    lines {
-      width: 1.1
-      color: 1717523245
-      dashdot {
-        dd: 6.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 17
-    lines {
-      width: 1.4
-      color: 1717523245
-      dashdot {
-        dd: 6.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 1.9
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 2.5
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 2.5
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-}
-cont {
-  name: "highway-track-grade2"
-  element {
-    scale: 16
-    lines {
-      width: 1.1
-      color: 1717523245
-      dashdot {
-        dd: 6.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 17
-    lines {
-      width: 1.4
-      color: 1717523245
-      dashdot {
-        dd: 6.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 1.9
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 2.5
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 2.5
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-}
-cont {
-  name: "highway-track-grade3"
-  element {
-    scale: 16
-    lines {
-      width: 1.1
-      color: 1717523245
-      dashdot {
-        dd: 6.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 17
-    lines {
-      width: 1.4
-      color: 1717523245
-      dashdot {
-        dd: 6.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 1.9
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 2.5
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 2.5
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-}
-cont {
-  name: "highway-track-grade4"
-  element {
-    scale: 16
-    lines {
-      width: 1.1
-      color: 1717523245
-      dashdot {
-        dd: 6.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 17
-    lines {
-      width: 1.4
-      color: 1717523245
-      dashdot {
-        dd: 6.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 1.9
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 2.5
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 2.5
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-}
-cont {
-  name: "highway-track-grade5"
-  element {
-    scale: 16
-    lines {
-      width: 1.1
-      color: 1717523245
-      dashdot {
-        dd: 6.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 17
-    lines {
-      width: 1.4
-      color: 1717523245
-      dashdot {
-        dd: 6.0
-        dd: 2.5
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 1.9
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 2.5
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 2.5
-      color: 1717523245
-      dashdot {
-        dd: 7.0
-        dd: 3.0
-      }
-      priority: 130
-    }
-  }
-}
-cont {
   name: "highway-track-no-access"
   element {
     scale: 16
@@ -21008,7 +20392,62 @@ cont {
   }
 }
 cont {
+  name: "highway-traffic_signals"
+  element {
+    scale: 15
+    symbol {
+      name: "traffic_signals"
+      priority: 175
+    }
+  }
+  element {
+    scale: 16
+    symbol {
+      name: "traffic_signals"
+      priority: 175
+    }
+  }
+  element {
+    scale: 17
+    symbol {
+      name: "traffic_signals"
+      priority: 175
+    }
+  }
+  element {
+    scale: 18
+    symbol {
+      name: "traffic_signals"
+      priority: 175
+    }
+  }
+  element {
+    scale: 19
+    symbol {
+      name: "traffic_signals"
+      priority: 175
+    }
+  }
+  element {
+    scale: 20
+    symbol {
+      name: "traffic_signals"
+      priority: 175
+    }
+  }
+}
+cont {
   name: "highway-trunk"
+  element {
+    scale: 6
+    lines {
+      width: 0.9
+      color: 3008113177
+      priority: 250
+      join: BEVELJOIN
+      cap: BUTTCAP
+    }
+  }
   element {
     scale: 7
     lines {
@@ -21357,6 +20796,16 @@ cont {
 }
 cont {
   name: "highway-trunk-bridge"
+  element {
+    scale: 6
+    lines {
+      width: 0.9
+      color: 3008113177
+      priority: 250
+      join: BEVELJOIN
+      cap: BUTTCAP
+    }
+  }
   element {
     scale: 7
     lines {
@@ -21801,6 +21250,16 @@ cont {
 }
 cont {
   name: "highway-trunk-tunnel"
+  element {
+    scale: 6
+    lines {
+      width: 0.9
+      color: 3008113177
+      priority: 250
+      join: BEVELJOIN
+      cap: BUTTCAP
+    }
+  }
   element {
     scale: 7
     lines {
@@ -27437,6 +26896,20 @@ cont {
 cont {
   name: "landuse-allotments"
   element {
+    scale: 12
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
+  element {
+    scale: 13
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
+  element {
     scale: 14
     area {
       color: 593674
@@ -27852,6 +27325,20 @@ cont {
 }
 cont {
   name: "landuse-field"
+  element {
+    scale: 12
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
+  element {
+    scale: 13
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
   element {
     scale: 14
     area {
@@ -29266,6 +28753,20 @@ cont {
 cont {
   name: "landuse-grass"
   element {
+    scale: 12
+    area {
+      color: 593674
+      priority: -1920
+    }
+  }
+  element {
+    scale: 13
+    area {
+      color: 593674
+      priority: -1920
+    }
+  }
+  element {
     scale: 14
     area {
       color: 593674
@@ -29494,6 +28995,20 @@ cont {
 }
 cont {
   name: "landuse-meadow"
+  element {
+    scale: 12
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
+  element {
+    scale: 13
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
   element {
     scale: 14
     area {
@@ -29805,6 +29320,20 @@ cont {
 cont {
   name: "landuse-orchard"
   element {
+    scale: 12
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
+  element {
+    scale: 13
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
+  element {
     scale: 14
     area {
       color: 593674
@@ -30030,6 +29559,20 @@ cont {
 }
 cont {
   name: "landuse-recreation_ground"
+  element {
+    scale: 12
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
+  element {
+    scale: 13
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
   element {
     scale: 14
     area {
@@ -30458,6 +30001,20 @@ cont {
 cont {
   name: "landuse-village_green"
   element {
+    scale: 12
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
+  element {
+    scale: 13
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
+  element {
     scale: 14
     area {
       color: 593674
@@ -30509,6 +30066,20 @@ cont {
 }
 cont {
   name: "landuse-vineyard"
+  element {
+    scale: 12
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
+  element {
+    scale: 13
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
   element {
     scale: 14
     area {
@@ -30815,6 +30386,86 @@ cont {
 }
 cont {
   name: "leisure-golf_course"
+  element {
+    scale: 12
+    area {
+      color: 593674
+      priority: -1910
+    }
+  }
+  element {
+    scale: 13
+    area {
+      color: 593674
+      priority: -1910
+    }
+  }
+  element {
+    scale: 14
+    area {
+      color: 593674
+      priority: -1910
+    }
+  }
+  element {
+    scale: 15
+    area {
+      color: 593674
+      priority: -1910
+    }
+  }
+  element {
+    scale: 16
+    area {
+      color: 593674
+      priority: -1910
+    }
+  }
+  element {
+    scale: 17
+    area {
+      color: 593674
+      priority: -1910
+    }
+  }
+  element {
+    scale: 18
+    area {
+      color: 593674
+      priority: -1910
+    }
+  }
+  element {
+    scale: 19
+    area {
+      color: 593674
+      priority: -1910
+    }
+  }
+  element {
+    scale: 20
+    area {
+      color: 593674
+      priority: -1910
+    }
+  }
+}
+cont {
+  name: "leisure-miniature_golf"
+  element {
+    scale: 12
+    area {
+      color: 593674
+      priority: -1910
+    }
+  }
+  element {
+    scale: 13
+    area {
+      color: 593674
+      priority: -1910
+    }
+  }
   element {
     scale: 14
     area {
@@ -33886,6 +33537,20 @@ cont {
 cont {
   name: "natural-grassland"
   element {
+    scale: 12
+    area {
+      color: 593674
+      priority: -1920
+    }
+  }
+  element {
+    scale: 13
+    area {
+      color: 593674
+      priority: -1920
+    }
+  }
+  element {
     scale: 14
     area {
       color: 593674
@@ -33937,6 +33602,20 @@ cont {
 }
 cont {
   name: "natural-heath"
+  element {
+    scale: 12
+    area {
+      color: 593674
+      priority: -1920
+    }
+  }
+  element {
+    scale: 13
+    area {
+      color: 593674
+      priority: -1920
+    }
+  }
   element {
     scale: 14
     area {
@@ -34132,6 +33811,20 @@ cont {
 }
 cont {
   name: "natural-scrub"
+  element {
+    scale: 12
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
+  element {
+    scale: 13
+    area {
+      color: 593674
+      priority: -1930
+    }
+  }
   element {
     scale: 14
     area {
@@ -44070,7 +43763,7 @@ cont {
     lines {
       width: 4.7
       color: 1184274
-      priority: 40
+      priority: 110
       cap: BUTTCAP
     }
     lines {
@@ -44085,7 +43778,7 @@ cont {
     lines {
       width: 6.0
       color: 1184274
-      priority: 40
+      priority: 110
       cap: BUTTCAP
     }
     lines {
@@ -44100,13 +43793,13 @@ cont {
     lines {
       width: 7.4
       color: 855309
-      priority: 30
+      priority: 100
       cap: BUTTCAP
     }
     lines {
       width: 6.2
       color: 1184274
-      priority: 40
+      priority: 110
       cap: BUTTCAP
     }
     lines {
@@ -44129,13 +43822,13 @@ cont {
     lines {
       width: 10.8
       color: 855309
-      priority: 30
+      priority: 100
       cap: BUTTCAP
     }
     lines {
       width: 9.4
       color: 1184274
-      priority: 40
+      priority: 110
       cap: BUTTCAP
     }
     lines {
@@ -44158,13 +43851,13 @@ cont {
     lines {
       width: 15.4
       color: 855309
-      priority: 30
+      priority: 100
       cap: BUTTCAP
     }
     lines {
       width: 13.6
       color: 1184274
-      priority: 40
+      priority: 110
       cap: BUTTCAP
     }
     lines {
@@ -44187,13 +43880,13 @@ cont {
     lines {
       width: 18.8
       color: 855309
-      priority: 30
+      priority: 100
       cap: BUTTCAP
     }
     lines {
       width: 17.0
       color: 1184274
-      priority: 40
+      priority: 110
       cap: BUTTCAP
     }
     lines {
@@ -44216,13 +43909,13 @@ cont {
     lines {
       width: 18.8
       color: 855309
-      priority: 30
+      priority: 100
       cap: BUTTCAP
     }
     lines {
       width: 17.0
       color: 1184274
-      priority: 40
+      priority: 110
       cap: BUTTCAP
     }
     lines {
@@ -49537,6 +49230,167 @@ cont {
   }
 }
 cont {
+  name: "railway-station-light_rail-berlin"
+  element {
+    scale: 13
+    symbol {
+      name: "lightrail-berlin-s"
+      priority: 2900
+    }
+  }
+  element {
+    scale: 14
+    symbol {
+      name: "lightrail-berlin-s"
+      priority: 2900
+    }
+  }
+  element {
+    scale: 15
+    symbol {
+      name: "lightrail-berlin-m"
+      priority: 2900
+    }
+    caption {
+      primary {
+        height: 12
+        color: 8947848
+        stroke_color: 856032768
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 10
+        color: 8947848
+        stroke_color: 856032768
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -7100
+    }
+  }
+  element {
+    scale: 16
+    symbol {
+      name: "lightrail-berlin-m"
+      priority: 2900
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 856032768
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 856032768
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -7100
+    }
+  }
+  element {
+    scale: 17
+    symbol {
+      name: "lightrail-berlin-m"
+      priority: 2900
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -7100
+    }
+  }
+  element {
+    scale: 18
+    symbol {
+      name: "lightrail-berlin-m"
+      priority: 2900
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -7100
+    }
+  }
+  element {
+    scale: 19
+    symbol {
+      name: "lightrail-berlin-m"
+      priority: 2900
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -7100
+    }
+  }
+  element {
+    scale: 20
+    symbol {
+      name: "lightrail-berlin-m"
+      priority: 2900
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -7100
+    }
+  }
+}
+cont {
   name: "railway-station-light_rail-london"
   element {
     scale: 13
@@ -49861,54 +49715,30 @@ cont {
 cont {
   name: "railway-station-monorail"
   element {
-    scale: 12
+    scale: 13
     symbol {
-      name: "train-s"
+      name: "monorail-s"
       priority: 2900
     }
   }
   element {
-    scale: 13
+    scale: 14
     symbol {
-      name: "train-m"
+      name: "monorail-s"
       priority: 2900
     }
     caption {
       primary {
         height: 11
         color: 8947848
-        stroke_color: 1711670784
+        stroke_color: 856032768
         offset_y: 1
         is_optional: true
       }
       secondary {
         height: 9
         color: 8947848
-        stroke_color: 1711670784
-        offset_y: 1
-        is_optional: true
-      }
-      priority: -7100
-    }
-  }
-  element {
-    scale: 14
-    symbol {
-      name: "train-m"
-      priority: 2900
-    }
-    caption {
-      primary {
-        height: 12
-        color: 8947848
-        stroke_color: 1292240384
-        offset_y: 1
-        is_optional: true
-      }
-      secondary {
-        height: 10
-        color: 8947848
-        stroke_color: 1292240384
+        stroke_color: 856032768
         offset_y: 1
         is_optional: true
       }
@@ -49918,7 +49748,7 @@ cont {
   element {
     scale: 15
     symbol {
-      name: "train-m"
+      name: "monorail-m"
       priority: 2900
     }
     caption {
@@ -49942,7 +49772,7 @@ cont {
   element {
     scale: 16
     symbol {
-      name: "train-m"
+      name: "monorail-m"
       priority: 2900
     }
     caption {
@@ -49966,19 +49796,19 @@ cont {
   element {
     scale: 17
     symbol {
-      name: "train-m"
+      name: "monorail-m"
       priority: 2900
     }
     caption {
       primary {
-        height: 14
+        height: 13
         color: 8947848
         stroke_color: 436602368
         offset_y: 1
         is_optional: true
       }
       secondary {
-        height: 12
+        height: 11
         color: 8947848
         stroke_color: 436602368
         offset_y: 1
@@ -49990,19 +49820,19 @@ cont {
   element {
     scale: 18
     symbol {
-      name: "train-m"
+      name: "monorail-m"
       priority: 2900
     }
     caption {
       primary {
-        height: 14
+        height: 13
         color: 8947848
         stroke_color: 436602368
         offset_y: 1
         is_optional: true
       }
       secondary {
-        height: 12
+        height: 11
         color: 8947848
         stroke_color: 436602368
         offset_y: 1
@@ -50014,19 +49844,19 @@ cont {
   element {
     scale: 19
     symbol {
-      name: "train-m"
+      name: "monorail-m"
       priority: 2900
     }
     caption {
       primary {
-        height: 14
+        height: 13
         color: 8947848
         stroke_color: 436602368
         offset_y: 1
         is_optional: true
       }
       secondary {
-        height: 12
+        height: 11
         color: 8947848
         stroke_color: 436602368
         offset_y: 1
@@ -50038,19 +49868,19 @@ cont {
   element {
     scale: 20
     symbol {
-      name: "train-m"
+      name: "monorail-m"
       priority: 2900
     }
     caption {
       primary {
-        height: 14
+        height: 13
         color: 8947848
         stroke_color: 436602368
         offset_y: 1
         is_optional: true
       }
       secondary {
-        height: 12
+        height: 11
         color: 8947848
         stroke_color: 436602368
         offset_y: 1
@@ -56535,6 +56365,167 @@ cont {
     scale: 20
     symbol {
       name: "subway-hirosima-m"
+      priority: 2000
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -8000
+    }
+  }
+}
+cont {
+  name: "railway-station-subway-hongkong"
+  element {
+    scale: 13
+    symbol {
+      name: "subway-hongkong-s"
+      priority: 2000
+    }
+  }
+  element {
+    scale: 14
+    symbol {
+      name: "subway-hongkong-s"
+      priority: 2000
+    }
+  }
+  element {
+    scale: 15
+    symbol {
+      name: "subway-hongkong-m"
+      priority: 2000
+    }
+    caption {
+      primary {
+        height: 12
+        color: 8947848
+        stroke_color: 856032768
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 10
+        color: 8947848
+        stroke_color: 856032768
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -8000
+    }
+  }
+  element {
+    scale: 16
+    symbol {
+      name: "subway-hongkong-m"
+      priority: 2000
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 856032768
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 856032768
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -8000
+    }
+  }
+  element {
+    scale: 17
+    symbol {
+      name: "subway-hongkong-m"
+      priority: 2000
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -8000
+    }
+  }
+  element {
+    scale: 18
+    symbol {
+      name: "subway-hongkong-m"
+      priority: 2000
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -8000
+    }
+  }
+  element {
+    scale: 19
+    symbol {
+      name: "subway-hongkong-m"
+      priority: 2000
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -8000
+    }
+  }
+  element {
+    scale: 20
+    symbol {
+      name: "subway-hongkong-m"
       priority: 2000
     }
     caption {
@@ -64787,6 +64778,167 @@ cont {
   }
 }
 cont {
+  name: "railway-station-subway-shenzhen"
+  element {
+    scale: 13
+    symbol {
+      name: "subway-shenzhen-s"
+      priority: 2000
+    }
+  }
+  element {
+    scale: 14
+    symbol {
+      name: "subway-shenzhen-s"
+      priority: 2000
+    }
+  }
+  element {
+    scale: 15
+    symbol {
+      name: "subway-shenzhen-m"
+      priority: 2000
+    }
+    caption {
+      primary {
+        height: 12
+        color: 8947848
+        stroke_color: 856032768
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 10
+        color: 8947848
+        stroke_color: 856032768
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -8000
+    }
+  }
+  element {
+    scale: 16
+    symbol {
+      name: "subway-shenzhen-m"
+      priority: 2000
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 856032768
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 856032768
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -8000
+    }
+  }
+  element {
+    scale: 17
+    symbol {
+      name: "subway-shenzhen-m"
+      priority: 2000
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -8000
+    }
+  }
+  element {
+    scale: 18
+    symbol {
+      name: "subway-shenzhen-m"
+      priority: 2000
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -8000
+    }
+  }
+  element {
+    scale: 19
+    symbol {
+      name: "subway-shenzhen-m"
+      priority: 2000
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -8000
+    }
+  }
+  element {
+    scale: 20
+    symbol {
+      name: "subway-shenzhen-m"
+      priority: 2000
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -8000
+    }
+  }
+}
+cont {
   name: "railway-station-subway-shiraz"
   element {
     scale: 13
@@ -72474,6 +72626,112 @@ cont {
   }
 }
 cont {
+  name: "railway-subway_entrance-hongkong"
+  element {
+    scale: 16
+    symbol {
+      name: "subway-hongkong-s"
+      priority: 550
+    }
+  }
+  element {
+    scale: 17
+    symbol {
+      name: "subway-hongkong-s"
+      priority: 550
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9450
+    }
+  }
+  element {
+    scale: 18
+    symbol {
+      name: "subway-hongkong-s"
+      priority: 550
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9450
+    }
+  }
+  element {
+    scale: 19
+    symbol {
+      name: "subway-hongkong-s"
+      priority: 550
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9450
+    }
+  }
+  element {
+    scale: 20
+    symbol {
+      name: "subway-hongkong-s"
+      priority: 550
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9450
+    }
+  }
+}
+cont {
   name: "railway-subway_entrance-isfahan"
   element {
     scale: 16
@@ -78133,6 +78391,112 @@ cont {
   }
 }
 cont {
+  name: "railway-subway_entrance-shenzhen"
+  element {
+    scale: 16
+    symbol {
+      name: "subway-shenzhen-s"
+      priority: 550
+    }
+  }
+  element {
+    scale: 17
+    symbol {
+      name: "subway-shenzhen-s"
+      priority: 550
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9450
+    }
+  }
+  element {
+    scale: 18
+    symbol {
+      name: "subway-shenzhen-s"
+      priority: 550
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9450
+    }
+  }
+  element {
+    scale: 19
+    symbol {
+      name: "subway-shenzhen-s"
+      priority: 550
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9450
+    }
+  }
+  element {
+    scale: 20
+    symbol {
+      name: "subway-shenzhen-s"
+      priority: 550
+    }
+    caption {
+      primary {
+        height: 13
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      secondary {
+        height: 11
+        color: 8947848
+        stroke_color: 436602368
+        offset_y: 1
+        is_optional: true
+      }
+      priority: -9450
+    }
+  }
+}
+cont {
   name: "railway-subway_entrance-shiraz"
   element {
     scale: 16
@@ -81100,7 +81464,7 @@ cont {
   element {
     scale: 14
     symbol {
-      name: "grocery-m"
+      name: "supermarket-m"
       priority: 1650
       min_distance: 4
     }
@@ -81117,7 +81481,7 @@ cont {
   element {
     scale: 15
     symbol {
-      name: "grocery-m"
+      name: "supermarket-m"
       priority: 1650
       min_distance: 3
     }
@@ -81134,7 +81498,7 @@ cont {
   element {
     scale: 16
     symbol {
-      name: "grocery-m"
+      name: "supermarket-m"
       priority: 1650
       min_distance: 16
     }
@@ -81151,7 +81515,7 @@ cont {
   element {
     scale: 17
     symbol {
-      name: "grocery-m"
+      name: "supermarket-m"
       priority: 1650
       min_distance: 16
     }
@@ -81168,7 +81532,7 @@ cont {
   element {
     scale: 18
     symbol {
-      name: "grocery-m"
+      name: "supermarket-m"
       priority: 1650
       min_distance: 15
     }
@@ -81185,7 +81549,7 @@ cont {
   element {
     scale: 19
     symbol {
-      name: "grocery-m"
+      name: "supermarket-m"
       priority: 1650
       min_distance: 15
     }
@@ -81202,7 +81566,7 @@ cont {
   element {
     scale: 20
     symbol {
-      name: "grocery-m"
+      name: "supermarket-m"
       priority: 1650
       min_distance: 15
     }
@@ -81474,216 +81838,6 @@ cont {
 }
 cont {
   name: "tourism-attraction"
-  element {
-    scale: 15
-    symbol {
-      name: "tourism-m"
-      priority: 1200
-      min_distance: 36
-    }
-    caption {
-      primary {
-        height: 10
-        color: 6710886
-        offset_y: 1
-        is_optional: true
-      }
-      priority: -8800
-    }
-  }
-  element {
-    scale: 16
-    symbol {
-      name: "tourism-m"
-      priority: 1200
-      min_distance: 36
-    }
-    caption {
-      primary {
-        height: 10
-        color: 6710886
-        offset_y: 1
-        is_optional: true
-      }
-      priority: -8800
-    }
-  }
-  element {
-    scale: 17
-    symbol {
-      name: "tourism-m"
-      priority: 1200
-      min_distance: 36
-    }
-    caption {
-      primary {
-        height: 10
-        color: 6710886
-        offset_y: 1
-        is_optional: true
-      }
-      priority: -8800
-    }
-  }
-  element {
-    scale: 18
-    symbol {
-      name: "tourism-m"
-      priority: 1200
-      min_distance: 36
-    }
-    caption {
-      primary {
-        height: 10
-        color: 6710886
-        offset_y: 1
-        is_optional: true
-      }
-      priority: -8800
-    }
-  }
-  element {
-    scale: 19
-    symbol {
-      name: "tourism-m"
-      priority: 1200
-      min_distance: 36
-    }
-    caption {
-      primary {
-        height: 10
-        color: 6710886
-        offset_y: 1
-        is_optional: true
-      }
-      priority: -8800
-    }
-  }
-  element {
-    scale: 20
-    symbol {
-      name: "tourism-m"
-      priority: 1200
-      min_distance: 36
-    }
-    caption {
-      primary {
-        height: 10
-        color: 6710886
-        offset_y: 1
-        is_optional: true
-      }
-      priority: -8800
-    }
-  }
-}
-cont {
-  name: "tourism-attraction-animal"
-  element {
-    scale: 15
-    symbol {
-      name: "tourism-m"
-      priority: 1200
-      min_distance: 36
-    }
-    caption {
-      primary {
-        height: 10
-        color: 6710886
-        offset_y: 1
-        is_optional: true
-      }
-      priority: -8800
-    }
-  }
-  element {
-    scale: 16
-    symbol {
-      name: "tourism-m"
-      priority: 1200
-      min_distance: 36
-    }
-    caption {
-      primary {
-        height: 10
-        color: 6710886
-        offset_y: 1
-        is_optional: true
-      }
-      priority: -8800
-    }
-  }
-  element {
-    scale: 17
-    symbol {
-      name: "tourism-m"
-      priority: 1200
-      min_distance: 36
-    }
-    caption {
-      primary {
-        height: 10
-        color: 6710886
-        offset_y: 1
-        is_optional: true
-      }
-      priority: -8800
-    }
-  }
-  element {
-    scale: 18
-    symbol {
-      name: "tourism-m"
-      priority: 1200
-      min_distance: 36
-    }
-    caption {
-      primary {
-        height: 10
-        color: 6710886
-        offset_y: 1
-        is_optional: true
-      }
-      priority: -8800
-    }
-  }
-  element {
-    scale: 19
-    symbol {
-      name: "tourism-m"
-      priority: 1200
-      min_distance: 36
-    }
-    caption {
-      primary {
-        height: 10
-        color: 6710886
-        offset_y: 1
-        is_optional: true
-      }
-      priority: -8800
-    }
-  }
-  element {
-    scale: 20
-    symbol {
-      name: "tourism-m"
-      priority: 1200
-      min_distance: 36
-    }
-    caption {
-      primary {
-        height: 10
-        color: 6710886
-        offset_y: 1
-        is_optional: true
-      }
-      priority: -8800
-    }
-  }
-}
-cont {
-  name: "tourism-attraction-specified"
   element {
     scale: 15
     symbol {
@@ -82885,283 +83039,6 @@ cont {
   }
 }
 cont {
-  name: "waterway-riverbank"
-  element {
-    scale: 1
-    area {
-      color: 8738
-      priority: -980
-    }
-  }
-  element {
-    scale: 2
-    area {
-      color: 8738
-      priority: -980
-    }
-  }
-  element {
-    scale: 3
-    area {
-      color: 8738
-      priority: -980
-    }
-  }
-  element {
-    scale: 4
-    area {
-      color: 8738
-      priority: -980
-    }
-  }
-  element {
-    scale: 5
-    area {
-      color: 8738
-      priority: -980
-    }
-  }
-  element {
-    scale: 6
-    area {
-      color: 8738
-      priority: -980
-    }
-  }
-  element {
-    scale: 7
-    area {
-      color: 8738
-      priority: -980
-    }
-  }
-  element {
-    scale: 8
-    area {
-      color: 8738
-      priority: -980
-    }
-  }
-  element {
-    scale: 9
-    area {
-      color: 8738
-      priority: -980
-    }
-  }
-  element {
-    scale: 10
-    lines {
-      width: 1.0
-      color: 1711677478
-      priority: -980
-      join: BEVELJOIN
-      cap: BUTTCAP
-    }
-    area {
-      color: 8738
-      priority: -980
-    }
-  }
-  element {
-    scale: 11
-    lines {
-      width: 1.2
-      color: 1711677478
-      priority: -980
-      join: BEVELJOIN
-      cap: BUTTCAP
-    }
-    area {
-      color: 8738
-      priority: -980
-    }
-    path_text {
-      primary {
-        height: 9
-        color: 19033
-      }
-      priority: 1550
-    }
-  }
-  element {
-    scale: 12
-    lines {
-      width: 1.2
-      color: 1711677478
-      priority: -980
-      join: BEVELJOIN
-      cap: BUTTCAP
-    }
-    area {
-      color: 8738
-      priority: -980
-    }
-    path_text {
-      primary {
-        height: 9
-        color: 19033
-      }
-      priority: 1550
-    }
-  }
-  element {
-    scale: 13
-    lines {
-      width: 1.6
-      color: 1711677478
-      priority: -980
-      cap: BUTTCAP
-    }
-    area {
-      color: 8738
-      priority: -980
-    }
-    path_text {
-      primary {
-        height: 9
-        color: 19033
-      }
-      priority: 1550
-    }
-  }
-  element {
-    scale: 14
-    lines {
-      width: 1.8
-      color: 1711677478
-      priority: -980
-      cap: BUTTCAP
-    }
-    area {
-      color: 8738
-      priority: -980
-    }
-    path_text {
-      primary {
-        height: 9
-        color: 19033
-      }
-      priority: 1550
-    }
-  }
-  element {
-    scale: 15
-    lines {
-      width: 2.2
-      color: 1711677478
-      priority: -980
-      cap: BUTTCAP
-    }
-    area {
-      color: 8738
-      priority: -980
-    }
-    path_text {
-      primary {
-        height: 11
-        color: 19033
-      }
-      priority: 1550
-    }
-  }
-  element {
-    scale: 16
-    lines {
-      width: 2.2
-      color: 1711677478
-      priority: -980
-    }
-    area {
-      color: 8738
-      priority: -980
-    }
-    path_text {
-      primary {
-        height: 11
-        color: 19033
-      }
-      priority: 1550
-    }
-  }
-  element {
-    scale: 17
-    lines {
-      width: 2.2
-      color: 1711677478
-      priority: -980
-    }
-    area {
-      color: 8738
-      priority: -980
-    }
-    path_text {
-      primary {
-        height: 11
-        color: 19033
-      }
-      priority: 1550
-    }
-  }
-  element {
-    scale: 18
-    lines {
-      width: 2.2
-      color: 1711677478
-      priority: -980
-    }
-    area {
-      color: 8738
-      priority: -980
-    }
-    path_text {
-      primary {
-        height: 11
-        color: 19033
-      }
-      priority: 1550
-    }
-  }
-  element {
-    scale: 19
-    lines {
-      width: 2.2
-      color: 1711677478
-      priority: -980
-    }
-    area {
-      color: 8738
-      priority: -980
-    }
-    path_text {
-      primary {
-        height: 11
-        color: 19033
-      }
-      priority: 1550
-    }
-  }
-  element {
-    scale: 20
-    lines {
-      width: 2.2
-      color: 1711677478
-      priority: -980
-    }
-    area {
-      color: 8738
-      priority: -980
-    }
-    path_text {
-      primary {
-        height: 11
-        color: 19033
-      }
-      priority: 1550
-    }
-  }
-}
-cont {
   name: "waterway-weir"
   element {
     scale: 15
@@ -83373,7 +83250,7 @@ colors {
   }
   value {
     name: "RoadShieldOrangeBackground"
-    color: 1272880
+    color: 11898395
   }
   value {
     name: "RoadShieldRedBackground"

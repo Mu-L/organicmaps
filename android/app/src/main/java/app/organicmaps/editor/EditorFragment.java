@@ -4,10 +4,10 @@ import android.content.Context;
 import android.os.Bundle;
 import android.text.InputType;
 import android.text.TextUtils;
+import android.text.method.LinkMovementMethod;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -35,7 +35,6 @@ import app.organicmaps.editor.data.TimeFormatUtils;
 import app.organicmaps.editor.data.Timetable;
 import app.organicmaps.util.Graphics;
 import app.organicmaps.util.InputUtils;
-import app.organicmaps.util.Option;
 import app.organicmaps.util.StringUtils;
 import app.organicmaps.util.UiUtils;
 import app.organicmaps.util.Utils;
@@ -51,6 +50,8 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
   private View mCardName;
   private View mCardAddress;
   private View mCardDetails;
+  private View mCardSocialMedia;
+  private View mCardBuilding;
 
   private RecyclerView mNamesView;
 
@@ -94,7 +95,6 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
 
   private TextView mStreet;
   private TextInputEditText mHouseNumber;
-  private View mBlockLevels;
   private TextInputEditText mBuildingLevels;
 
   // Define Metadata entries, that have more tricky logic, separately.
@@ -102,9 +102,11 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
   private TextView mEditPhoneLink;
   private TextView mCuisine;
   private SwitchCompat mWifi;
+  private TextView mSelfService;
+  private SwitchCompat mOutdoorSeating;
 
   // Default Metadata entries.
-  private final class MetadataEntry
+  private static final class MetadataEntry
   {
     TextInputEditText mEdit;
     TextInputLayout mInput;
@@ -134,6 +136,7 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
   private View mEditOpeningHours;
   private TextInputEditText mDescription;
   private final Map<Metadata.MetadataType, View> mDetailsBlocks = new HashMap<>();
+  private final Map<Metadata.MetadataType, View> mSocialMediaBlocks = new HashMap<>();
   private TextView mReset;
 
   private EditorHostFragment mParent;
@@ -184,6 +187,7 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
     mPhone.setText(Editor.nativeGetPhone());
 
     initMetadataEntry(Metadata.MetadataType.FMD_WEBSITE, R.string.error_enter_correct_web);
+    initMetadataEntry(Metadata.MetadataType.FMD_WEBSITE_MENU, R.string.error_enter_correct_web);
     initMetadataEntry(Metadata.MetadataType.FMD_EMAIL, R.string.error_enter_correct_email);
     initMetadataEntry(Metadata.MetadataType.FMD_CONTACT_FACEBOOK, R.string.error_enter_correct_facebook_page);
     initMetadataEntry(Metadata.MetadataType.FMD_CONTACT_INSTAGRAM, R.string.error_enter_correct_instagram_page);
@@ -192,8 +196,12 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
     initMetadataEntry(Metadata.MetadataType.FMD_CONTACT_LINE, R.string.error_enter_correct_line_page);
 
     mCuisine.setText(Editor.nativeGetFormattedCuisine());
+    String selfServiceMetadata = Editor.nativeGetMetadata(Metadata.MetadataType.FMD_SELF_SERVICE.toInt());
+    mSelfService.setText(Utils.getTagValueLocalized(view.getContext(), "self_service", selfServiceMetadata));
     initMetadataEntry(Metadata.MetadataType.FMD_OPERATOR, 0);
     mWifi.setChecked(Editor.nativeHasWifi());
+    // TODO Reimplement this to avoid https://github.com/organicmaps/organicmaps/issues/9049
+    //mOutdoorSeating.setChecked(Editor.nativeGetSwitchInput(Metadata.MetadataType.FMD_OUTDOOR_SEATING.toInt(),"yes"));
     refreshOpeningTime();
     refreshEditableFields();
     refreshResetButton();
@@ -215,6 +223,9 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
     Editor.nativeSetBuildingLevels(mBuildingLevels.getText().toString());
     Editor.nativeSetHasWifi(mWifi.isChecked());
     Editor.nativeSetNames(mParent.getNamesAsArray());
+
+    // TODO Reimplement this to avoid https://github.com/organicmaps/organicmaps/issues/9049
+    //Editor.nativeSetSwitchInput(Metadata.MetadataType.FMD_OUTDOOR_SEATING.toInt(), mOutdoorSeating.isChecked(), "yes", "no");
 
     for (var e : mMetadata.entrySet())
       Editor.nativeSetMetadata(e.getKey().toInt(), e.getValue().mEdit.getText().toString());
@@ -291,29 +302,29 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
   {
     UiUtils.showIf(Editor.nativeIsNameEditable(), mCardName);
     UiUtils.showIf(Editor.nativeIsAddressEditable(), mCardAddress);
-    UiUtils.showIf(Editor.nativeIsBuilding() && !Editor.nativeIsPointType(), mBlockLevels);
+    UiUtils.showIf(Editor.nativeIsBuilding() && !Editor.nativeIsPointType(), mCardBuilding);
 
     final int[] editableDetails = Editor.nativeGetEditableProperties();
-    if (editableDetails.length == 0)
-    {
-      UiUtils.hide(mCardDetails);
-      return;
-    }
 
-    for (var e : mDetailsBlocks.entrySet())
+    setCardVisibility(mCardDetails, mDetailsBlocks, editableDetails);
+    setCardVisibility(mCardSocialMedia, mSocialMediaBlocks, editableDetails);
+  }
+
+  private void setCardVisibility(View card, Map<Metadata. MetadataType, View> blocks, int[] editableDetails) {
+    for (var e : blocks.entrySet())
       UiUtils.hide(e.getValue());
 
-    boolean anyEditableDetails = false;
+    boolean anyBlockElement = false;
     for (int type : editableDetails)
     {
-      final View detailsBlock = mDetailsBlocks.get(Metadata.MetadataType.fromInt(type));
-      if (detailsBlock == null)
+      final View blockElement = blocks.get(Metadata.MetadataType.fromInt(type));
+      if (blockElement == null)
         continue;
 
-      anyEditableDetails = true;
-      UiUtils.show(detailsBlock);
+      anyBlockElement = true;
+      UiUtils.show(blockElement);
     }
-    UiUtils.showIf(anyEditableDetails, mCardDetails);
+    UiUtils.showIf(anyBlockElement, card);
   }
 
   private void refreshOpeningTime()
@@ -397,13 +408,14 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
   private void initViews(View view)
   {
     final View categoryBlock = view.findViewById(R.id.category);
-    categoryBlock.setOnClickListener(this);
     // TODO show icon and fill it when core will implement that
     UiUtils.hide(categoryBlock.findViewById(R.id.icon));
     mCategory = categoryBlock.findViewById(R.id.name);
     mCardName = view.findViewById(R.id.cv__name);
     mCardAddress = view.findViewById(R.id.cv__address);
     mCardDetails = view.findViewById(R.id.cv__details);
+    mCardSocialMedia = view.findViewById(R.id.cv__social_media);
+    mCardBuilding = view.findViewById(R.id.cv__building);
     initNamesView(view);
 
     // Address
@@ -416,7 +428,7 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
     initBlock(view, Metadata.MetadataType.FMD_POSTCODE, R.id.block_zipcode, 0, R.string.editor_zip_code, 0);
 
     // Details
-    mBlockLevels = view.findViewById(R.id.block_levels);
+    View mBlockLevels = view.findViewById(R.id.block_levels);
     mBuildingLevels = findInputAndInitBlock(mBlockLevels, 0,
         getString(R.string.editor_storey_number, Editor.nativeGetMaxEditableBuildingLevels()));
     mBuildingLevels.setInputType(InputType.TYPE_CLASS_NUMBER);
@@ -426,21 +438,23 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
     mEditPhoneLink = blockPhone.findViewById(R.id.edit_phone);
     mEditPhoneLink.setOnClickListener(this);
     mPhone.setOnClickListener(this);
-    initBlock(view, Metadata.MetadataType.FMD_WEBSITE, R.id.block_website,
+    View websiteBlock = initBlock(view, Metadata.MetadataType.FMD_WEBSITE, R.id.block_website,
             R.drawable.ic_website, R.string.website, InputType.TYPE_TEXT_VARIATION_URI);
-    initBlock(view, Metadata.MetadataType.FMD_EMAIL, R.id.block_email,
+    View websiteMenuBlock = initBlock(view, Metadata.MetadataType.FMD_WEBSITE_MENU, R.id.block_website_menu,
+            R.drawable.ic_website_menu, R.string.website_menu, InputType.TYPE_TEXT_VARIATION_URI);
+    View emailBlock = initBlock(view, Metadata.MetadataType.FMD_EMAIL, R.id.block_email,
             R.drawable.ic_email, R.string.email, InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-    initBlock(view, Metadata.MetadataType.FMD_CONTACT_FACEBOOK, R.id.block_facebook,
+    View facebookContactBlock = initBlock(view, Metadata.MetadataType.FMD_CONTACT_FACEBOOK, R.id.block_facebook,
             R.drawable.ic_facebook_white, R.string.facebook, InputType.TYPE_TEXT_VARIATION_URI);
-    initBlock(view, Metadata.MetadataType.FMD_CONTACT_INSTAGRAM, R.id.block_instagram,
+    View instagramContactBlock = initBlock(view, Metadata.MetadataType.FMD_CONTACT_INSTAGRAM, R.id.block_instagram,
             R.drawable.ic_instagram_white, R.string.instagram, InputType.TYPE_TEXT_VARIATION_URI);
-    initBlock(view, Metadata.MetadataType.FMD_CONTACT_TWITTER, R.id.block_twitter,
+    View twitterContactBlock = initBlock(view, Metadata.MetadataType.FMD_CONTACT_TWITTER, R.id.block_twitter,
             R.drawable.ic_twitterx_white, R.string.twitter, InputType.TYPE_TEXT_VARIATION_URI);
-    initBlock(view, Metadata.MetadataType.FMD_CONTACT_VK, R.id.block_vk,
+    View vkContactBlock = initBlock(view, Metadata.MetadataType.FMD_CONTACT_VK, R.id.block_vk,
             R.drawable.ic_vk_white, R.string.vk, InputType.TYPE_TEXT_VARIATION_URI);
-    initBlock(view, Metadata.MetadataType.FMD_CONTACT_LINE, R.id.block_line,
+    View lineContactBlock = initBlock(view, Metadata.MetadataType.FMD_CONTACT_LINE, R.id.block_line,
             R.drawable.ic_line_white, R.string.editor_line_social_network, InputType.TYPE_TEXT_VARIATION_URI);
-    initBlock(view, Metadata.MetadataType.FMD_OPERATOR, R.id.block_operator,
+    View operatorBlock = initBlock(view, Metadata.MetadataType.FMD_OPERATOR, R.id.block_operator,
             R.drawable.ic_operator, R.string.editor_operator, 0);
 
     View blockCuisine = view.findViewById(R.id.block_cuisine);
@@ -450,6 +464,14 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
     View blockWifi = view.findViewById(R.id.block_wifi);
     mWifi = view.findViewById(R.id.sw__wifi);
     blockWifi.setOnClickListener(this);
+
+    View blockSelfService = view.findViewById(R.id.block_self_service);
+    blockSelfService.setOnClickListener(this);
+    mSelfService = view.findViewById(R.id.self_service);
+
+    View blockOutdoorSeating = view.findViewById(R.id.block_outdoor_seating);
+    mOutdoorSeating = view.findViewById(R.id.sw__outdoor_seating);
+    blockOutdoorSeating.setOnClickListener(this);
     View blockOpeningHours = view.findViewById(R.id.block_opening_hours);
     mEditOpeningHours = blockOpeningHours.findViewById(R.id.edit_opening_hours);
     mEditOpeningHours.setOnClickListener(this);
@@ -459,7 +481,8 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
     mOpeningHours.setOnClickListener(this);
     final View cardMore = view.findViewById(R.id.cv__more);
     mDescription = findInput(cardMore);
-    cardMore.findViewById(R.id.about_osm).setOnClickListener(this);
+    TextView osmInfo = view.findViewById(R.id.osm_info);
+    osmInfo.setMovementMethod(LinkMovementMethod.getInstance());
     mReset = view.findViewById(R.id.reset);
     mReset.setOnClickListener(this);
 
@@ -467,6 +490,20 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
     mDetailsBlocks.put(Metadata.MetadataType.FMD_PHONE_NUMBER, blockPhone);
     mDetailsBlocks.put(Metadata.MetadataType.FMD_CUISINE, blockCuisine);
     mDetailsBlocks.put(Metadata.MetadataType.FMD_INTERNET, blockWifi);
+    mDetailsBlocks.put(Metadata.MetadataType.FMD_SELF_SERVICE, blockSelfService);
+    // TODO Reimplement this to avoid https://github.com/organicmaps/organicmaps/issues/9049
+    UiUtils.hide(blockOutdoorSeating);
+    //mDetailsBlocks.put(Metadata.MetadataType.FMD_OUTDOOR_SEATING, blockOutdoorSeating);
+    mDetailsBlocks.put(Metadata.MetadataType.FMD_WEBSITE, websiteBlock);
+    mDetailsBlocks.put(Metadata.MetadataType.FMD_WEBSITE_MENU, websiteMenuBlock);
+    mDetailsBlocks.put(Metadata.MetadataType.FMD_EMAIL, emailBlock);
+    mDetailsBlocks.put(Metadata.MetadataType.FMD_OPERATOR, operatorBlock);
+
+    mSocialMediaBlocks.put(Metadata.MetadataType.FMD_CONTACT_FACEBOOK, facebookContactBlock);
+    mSocialMediaBlocks.put(Metadata.MetadataType.FMD_CONTACT_INSTAGRAM, instagramContactBlock);
+    mSocialMediaBlocks.put(Metadata.MetadataType.FMD_CONTACT_TWITTER, twitterContactBlock);
+    mSocialMediaBlocks.put(Metadata.MetadataType.FMD_CONTACT_VK, vkContactBlock);
+    mSocialMediaBlocks.put(Metadata.MetadataType.FMD_CONTACT_LINE, lineContactBlock);
   }
 
   private static TextInputEditText findInput(View blockWithInput)
@@ -497,12 +534,12 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
       mParent.editPhone();
     else if (id == R.id.block_wifi)
       mWifi.toggle();
+    else if (id == R.id.block_self_service)
+      mParent.editSelfService();
     else if (id == R.id.block_street)
       mParent.editStreet();
     else if (id == R.id.block_cuisine)
       mParent.editCuisine();
-    else if (id == R.id.category)
-      mParent.editCategory();
     else if (id == R.id.more_names || id == R.id.show_additional_names)
     {
       if (!mNamesAdapter.areAdditionalLanguagesShown() || validateNames())
@@ -510,10 +547,10 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
     }
     else if (id == R.id.add_langs)
       mParent.addLanguage();
-    else if (id == R.id.about_osm)
-      Utils.openUrl(requireActivity(), getString(R.string.osm_wiki_about_url));
     else if (id == R.id.reset)
       reset();
+    else if (id == R.id.block_outdoor_seating)
+      mOutdoorSeating.toggle();
   }
 
   private void showAdditionalNames(boolean show)
@@ -651,9 +688,9 @@ public class EditorFragment extends BaseMwmFragment implements View.OnClickListe
   {
     return (activity, text) -> {
       if (TextUtils.isEmpty(text))
-        return new Option<>(activity.getString(R.string.delete_place_empty_comment_error));
+        return activity.getString(R.string.delete_place_empty_comment_error);
       else
-        return Option.empty();
+        return null;
     };
   }
 }

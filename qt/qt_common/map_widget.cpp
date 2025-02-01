@@ -15,15 +15,21 @@
 #include <functional>
 #include <string>
 
-#include <QGesture>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
+#include <QTouchEvent>
 
 #include <QtGui/QMouseEvent>
 #include <QtGui/QOpenGLFunctions>
 #include <QtGui/QAction>
 #include <QtWidgets/QMenu>
+
+// Fraction of the viewport for a move event
+static constexpr float kViewportFractionRoughMove = 0.2;
+
+// Fraction of the viewport for a small move event
+static constexpr float kViewportFractionSmoothMove = 0.1;
 
 namespace qt::common
 {
@@ -44,6 +50,7 @@ MapWidget::MapWidget(Framework & framework, bool isScreenshotMode, QWidget * par
   VERIFY(connect(m_updateTimer.get(), SIGNAL(timeout()), this, SLOT(update())), ());
   m_updateTimer->setSingleShot(false);
   m_updateTimer->start(1000 / 60);
+  setAttribute(Qt::WA_AcceptTouchEvents);
 }
 
 MapWidget::~MapWidget()
@@ -61,12 +68,20 @@ void MapWidget::BindHotkeys(QWidget & parent)
       {Qt::Key_Equal, SLOT(ScalePlus())},
       {Qt::Key_Plus, SLOT(ScalePlus())},
       {Qt::Key_Minus, SLOT(ScaleMinus())},
-      {static_cast<int>(Qt::ALT) + static_cast<int>(Qt::Key_Equal), SLOT(ScalePlusLight())},
-      {static_cast<int>(Qt::ALT) + static_cast<int>(Qt::Key_Plus), SLOT(ScalePlusLight())},
-      {static_cast<int>(Qt::ALT) + static_cast<int>(Qt::Key_Minus), SLOT(ScaleMinusLight())},
+      {Qt::Key_Right, SLOT(MoveRight())},
+      {Qt::Key_Left, SLOT(MoveLeft())},
+      {Qt::Key_Up, SLOT(MoveUp())},
+      {Qt::Key_Down, SLOT(MoveDown())},
+      {Qt::ALT | Qt::Key_Equal, SLOT(ScalePlusLight())},
+      {Qt::ALT | Qt::Key_Plus, SLOT(ScalePlusLight())},
+      {Qt::ALT | Qt::Key_Minus, SLOT(ScaleMinusLight())},
+      {Qt::ALT | Qt::Key_Right, SLOT(MoveRightSmooth())},
+      {Qt::ALT | Qt::Key_Left, SLOT(MoveLeftSmooth())},
+      {Qt::ALT | Qt::Key_Up, SLOT(MoveUpSmooth())},
+      {Qt::ALT | Qt::Key_Down, SLOT(MoveDownSmooth())},
 #ifdef ENABLE_AA_SWITCH
-      {static_cast<int>(Qt::ALT) + static_cast<int>(Qt::Key_A), SLOT(AntialiasingOn())},
-      {static_cast<int>(Qt::ALT) + static_cast<int>(Qt::Key_S), SLOT(AntialiasingOff())},
+      {Qt::ALT | Qt::Key_A, SLOT(AntialiasingOn())},
+      {Qt::ALT | Qt::Key_S, SLOT(AntialiasingOff())},
 #endif
   };
 
@@ -118,6 +133,22 @@ void MapWidget::ScalePlusLight() { m_framework.Scale(Framework::SCALE_MAG_LIGHT,
 
 void MapWidget::ScaleMinusLight() { m_framework.Scale(Framework::SCALE_MIN_LIGHT, true); }
 
+void MapWidget::MoveRight() { m_framework.Move(-kViewportFractionRoughMove, 0, true); }
+
+void MapWidget::MoveRightSmooth() { m_framework.Move(-kViewportFractionSmoothMove, 0, true); }
+
+void MapWidget::MoveLeft() { m_framework.Move(kViewportFractionRoughMove, 0, true); }
+
+void MapWidget::MoveLeftSmooth() { m_framework.Move(kViewportFractionSmoothMove, 0, true); }
+
+void MapWidget::MoveUp() { m_framework.Move(0, -kViewportFractionRoughMove, true); }
+
+void MapWidget::MoveUpSmooth() { m_framework.Move(0, -kViewportFractionSmoothMove, true); }
+
+void MapWidget::MoveDown() { m_framework.Move(0, kViewportFractionRoughMove, true); }
+
+void MapWidget::MoveDownSmooth() { m_framework.Move(0, kViewportFractionSmoothMove, true); }
+
 void MapWidget::AntialiasingOn()
 {
   auto engine = m_framework.GetDrapeEngine();
@@ -154,7 +185,7 @@ m2::PointD MapWidget::GetDevicePoint(QMouseEvent * e) const
   return m2::PointD(L2D(e->position().x()), L2D(e->position().y()));
 }
 
-df::Touch MapWidget::GetTouch(QMouseEvent * e) const
+df::Touch MapWidget::GetDfTouchFromQMouseEvent(QMouseEvent * e) const
 {
   df::Touch touch;
   touch.m_id = 0;
@@ -162,11 +193,11 @@ df::Touch MapWidget::GetTouch(QMouseEvent * e) const
   return touch;
 }
 
-df::TouchEvent MapWidget::GetTouchEvent(QMouseEvent * e, df::TouchEvent::ETouchType type) const
+df::TouchEvent MapWidget::GetDfTouchEventFromQMouseEvent(QMouseEvent * e, df::TouchEvent::ETouchType type) const
 {
   df::TouchEvent event;
   event.SetTouchType(type);
-  event.SetFirstTouch(GetTouch(e));
+  event.SetFirstTouch(GetDfTouchFromQMouseEvent(e));
   if (IsCommandModifier(e))
     event.SetSecondTouch(GetSymmetrical(event.GetFirstTouch()));
 
@@ -199,107 +230,27 @@ void MapWidget::UpdateScaleControl()
 
 void MapWidget::Build()
 {
-  std::string vertexSrc;
-  std::string fragmentSrc;
+  std::string_view vertexSrc;
+  std::string_view fragmentSrc;
   if (m_apiOpenGLES3)
   {
 #if defined(OMIM_OS_LINUX)
-    vertexSrc =
-        "\
-      #version 300 es\n \
-        #ifdef GL_FRAGMENT_PRECISION_HIGH\n\
-          precision highp float;\n\
-        #else\n\
-          precision mediump float;\n\
-        #endif\n\
-      in vec4 a_position; \
-      uniform vec2 u_samplerSize; \
-      out vec2 v_texCoord; \
-      \
-      void main() \
-      { \
-        v_texCoord = vec2(a_position.z * u_samplerSize.x, a_position.w * u_samplerSize.y); \
-        gl_Position = vec4(a_position.x, a_position.y, 0.0, 1.0);\
-      }";
-
-    fragmentSrc =
-        "\
-      #version 300 es\n \
-        #ifdef GL_FRAGMENT_PRECISION_HIGH\n\
-          precision highp float;\n\
-        #else\n\
-          precision mediump float;\n\
-        #endif\n\
-      uniform sampler2D u_sampler; \
-      in vec2 v_texCoord; \
-      out vec4 v_FragColor; \
-      \
-      void main() \
-      { \
-        v_FragColor = vec4(texture(u_sampler, v_texCoord).rgb, 1.0); \
-      }";
+    vertexSrc = ":common/shaders/gles_300.vsh.glsl";
+    fragmentSrc = ":common/shaders/gles_300.fsh.glsl";
 #else
-    vertexSrc =
-        "\
-      #version 150 core\n \
-      in vec4 a_position; \
-      uniform vec2 u_samplerSize; \
-      out vec2 v_texCoord; \
-      \
-      void main() \
-      { \
-        v_texCoord = vec2(a_position.z * u_samplerSize.x, a_position.w * u_samplerSize.y); \
-        gl_Position = vec4(a_position.x, a_position.y, 0.0, 1.0);\
-      }";
-    fragmentSrc =
-        "\
-      #version 150 core\n \
-      uniform sampler2D u_sampler; \
-      in vec2 v_texCoord; \
-      out vec4 v_FragColor; \
-      \
-      void main() \
-      { \
-        v_FragColor = vec4(texture(u_sampler, v_texCoord).rgb, 1.0); \
-      }";
+    vertexSrc = ":common/shaders/gl_150.vsh.glsl";
+    fragmentSrc = ":common/shaders/gl_150.fsh.glsl";
 #endif
-
   }
   else
   {
-    vertexSrc =
-        "\
-      attribute vec4 a_position; \
-      uniform vec2 u_samplerSize; \
-      varying vec2 v_texCoord; \
-      \
-      void main() \
-      { \
-        v_texCoord = vec2(a_position.z * u_samplerSize.x, a_position.w * u_samplerSize.y); \
-        gl_Position = vec4(a_position.x, a_position.y, 0.0, 1.0);\
-      }";
-
-    fragmentSrc =
-        "\
-      #ifdef GL_ES\n\
-        #ifdef GL_FRAGMENT_PRECISION_HIGH\n\
-          precision highp float;\n\
-        #else\n\
-          precision mediump float;\n\
-        #endif\n\
-      #endif\n\
-      uniform sampler2D u_sampler; \
-      varying vec2 v_texCoord; \
-      \
-      void main() \
-      { \
-        gl_FragColor = vec4(texture2D(u_sampler, v_texCoord).rgb, 1.0); \
-      }";
+    vertexSrc = ":common/shaders/gles_200.vsh.glsl";
+    fragmentSrc = ":common/shaders/gles_200.fsh.glsl";
   }
 
   m_program = std::make_unique<QOpenGLShaderProgram>(this);
-  m_program->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexSrc.c_str());
-  m_program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentSrc.c_str());
+  m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, vertexSrc.data());
+  m_program->addShaderFromSourceFile(QOpenGLShader::Fragment, fragmentSrc.data());
   m_program->link();
 
   m_vao = std::make_unique<QOpenGLVertexArrayObject>(this);
@@ -316,6 +267,11 @@ void MapWidget::Build()
                            QVector4D(-1.0, -1.0, 0.0, 0.0),
                            QVector4D(1.0, -1.0, 1.0, 0.0)};
   m_vbo->allocate(static_cast<void*>(vertices), sizeof(vertices));
+  QOpenGLFunctions *f = QOpenGLContext::currentContext()->functions();
+  // 0-index of the buffer is linked to "a_position" attribute in vertex shader.
+  // Introduced in https://github.com/organicmaps/organicmaps/pull/9814
+  f->glEnableVertexAttribArray(0);
+  f->glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(QVector4D), nullptr);
 
   m_program->release();
   m_vao->release();
@@ -469,9 +425,6 @@ void MapWidget::paintGL()
     int const samplerSizeLocation = m_program->uniformLocation("u_samplerSize");
     m_program->setUniformValue(samplerSizeLocation, samplerSize);
 
-    m_program->enableAttributeArray("a_position");
-    m_program->setAttributeBuffer("a_position", GL_FLOAT, 0, 4, 0);
-
     funcs->glClearColor(0.0, 0.0, 0.0, 1.0);
     funcs->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -518,7 +471,7 @@ void MapWidget::mousePressEvent(QMouseEvent * e)
 
   QOpenGLWidget::mousePressEvent(e);
   if (IsLeftButton(e))
-    m_framework.TouchEvent(GetTouchEvent(e, df::TouchEvent::TOUCH_DOWN));
+    m_framework.TouchEvent(GetDfTouchEventFromQMouseEvent(e, df::TouchEvent::TOUCH_DOWN));
 }
 
 void MapWidget::mouseMoveEvent(QMouseEvent * e)
@@ -528,7 +481,7 @@ void MapWidget::mouseMoveEvent(QMouseEvent * e)
 
   QOpenGLWidget::mouseMoveEvent(e);
   if (IsLeftButton(e))
-    m_framework.TouchEvent(GetTouchEvent(e, df::TouchEvent::TOUCH_MOVE));
+    m_framework.TouchEvent(GetDfTouchEventFromQMouseEvent(e, df::TouchEvent::TOUCH_MOVE));
 }
 
 void MapWidget::mouseReleaseEvent(QMouseEvent * e)
@@ -541,7 +494,7 @@ void MapWidget::mouseReleaseEvent(QMouseEvent * e)
 
   QOpenGLWidget::mouseReleaseEvent(e);
   if (IsLeftButton(e))
-    m_framework.TouchEvent(GetTouchEvent(e, df::TouchEvent::TOUCH_UP));
+    m_framework.TouchEvent(GetDfTouchEventFromQMouseEvent(e, df::TouchEvent::TOUCH_UP));
 }
 
 void MapWidget::wheelEvent(QWheelEvent * e)
@@ -558,35 +511,4 @@ void MapWidget::wheelEvent(QWheelEvent * e)
   /// @todo Here you can tune the speed of zooming.
   m_framework.Scale(exp(factor), m2::PointD(L2D(pos.x()), L2D(pos.y())), false);
 }
-
-void MapWidget::grabGestures(QList<Qt::GestureType> const & gestures)
-{
-  for (Qt::GestureType gesture : gestures)
-    grabGesture(gesture);
-}
-
-bool MapWidget::event(QEvent * event)
-{
-  if (event->type() == QEvent::Gesture)
-    return gestureEvent(dynamic_cast<QGestureEvent const *>(event));
-  return QWidget::event(event);
-}
-
-bool MapWidget::gestureEvent(QGestureEvent const * event)
-{
-  if (QGesture const * pinch = event->gesture(Qt::PinchGesture))
-    pinchTriggered(dynamic_cast<QPinchGesture const *>(pinch));
-  return true;
-}
-
-void MapWidget::pinchTriggered(QPinchGesture const * gesture)
-{
-  if (gesture->changeFlags() & QPinchGesture::ScaleFactorChanged)
-  {
-    auto const factor = gesture->totalScaleFactor();
-    if (factor != 1.0)
-      m_framework.Scale(factor > 1.0 ? Framework::SCALE_MAG : Framework::SCALE_MIN, true);
-  }
-}
-
 } // namespace qt::common

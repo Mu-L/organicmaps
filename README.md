@@ -1,25 +1,17 @@
-# Organic Maps
-
-<a name="install"/>
+<div align="center">
+  <img src="/qt/res/logo.png" height="100"/>
+</div>
+<h1 align="center"">Organic Maps</h1>
 
 [Organic Maps](https://organicmaps.app) is a free Android & iOS offline maps app for travellers, tourists, drivers, hikers, and cyclists.
 It uses crowd-sourced [OpenStreetMap](https://www.openstreetmap.org) data and is developed with love by the creators of **MapsWithMe** (later renamed to **Maps.Me**) and by our community.
 No ads, no tracking, no data collection, no crapware. Your [donations](https://organicmaps.app/donate/) and positive reviews motivate and inspire us, thanks ❤️!
 
-<p float="left">
-  <a href="https://apps.apple.com/app/organic-maps/id1567437057">
-    <img alt="Download on the App Store" src="docs/badges/apple-appstore.png" width="180">
-  </a>
-  <a href="https://play.google.com/store/apps/details?id=app.organicmaps">
-    <img alt="Get it on Google Play" src="docs/badges/google-play.png" width="180">
-  </a>
-  <a href="https://appgallery.huawei.com/#/app/C104325611">
-    <img alt="Explore it on AppGallery" src="docs/badges/huawei-appgallery.png" width="180">
-  </a>
-  <a href="https://f-droid.org/en/packages/app.organicmaps/">
-    <img alt="Get it on F-Droid" src="docs/badges/fdroid.png" width="180">
-  </a>
-</p>
+[<img src="docs/badges/apple-appstore.png" alt="App Store" width="160">](https://apps.apple.com/app/organic-maps/id1567437057)
+[<img src="docs/badges/google-play.png" alt="Google Play" width="160">](https://play.google.com/store/apps/details?id=app.organicmaps)
+[<img src="docs/badges/huawei-appgallery.png" alt="AppGallery" width="160">](https://appgallery.huawei.com/#/app/C104325611)
+[<img src="docs/badges/obtainium.png" alt="Obtainium" width="160">](https://github.com/organicmaps/organicmaps/wiki/Installing-Organic-Maps-from-GitHub-using-Obtainium)
+[<img src="docs/badges/fdroid.png" alt="F-Droid" width="160">](https://f-droid.org/en/packages/app.organicmaps/)
 
 <p float="left">
   <img src="android/app/src/fdroid/play/listings/en-US/graphics/phone-screenshots/1.jpg" width="400" />
@@ -112,7 +104,7 @@ Beloved institutional sponsors below have provided targeted grants to cover some
       <a href="https://summerofcode.withgoogle.com/"><img src="docs/sponsors/gsoc.svg" alt="Google Summer of Code" width="200px"></a>
     </td>
     <td>
-      <a href="https://summerofcode.withgoogle.com/">Google</a> backed 5 student's projects in the Google Summer of Code program during <a href="https://summerofcode.withgoogle.com/programs/2022/organizations/organic-maps">2022</a> and <a href="https://summerofcode.withgoogle.com/programs/2023/organizations/organic-maps">2023</a> programs. Noteworthy projects included Android Auto, Outdoor Style, and Wikipedia Dump Extractor.
+      <a href="https://summerofcode.withgoogle.com/">Google</a> backed 5 student's projects in the Google Summer of Code program during <a href="https://summerofcode.withgoogle.com/programs/2022/organizations/organic-maps">2022</a> and <a href="https://summerofcode.withgoogle.com/programs/2023/organizations/organic-maps">2023</a> programs. Noteworthy projects included Android Auto and Wikipedia Dump Extractor.
     </td>
   </tr>
   <tr>
@@ -121,6 +113,14 @@ Beloved institutional sponsors below have provided targeted grants to cover some
     </td>
     <td>
       <a href="https://www.mythic-beasts.com/">Mythic Beasts</a> ISP <a href="https://www.mythic-beasts.com/blog/2021/10/06/improving-the-world-bit-by-expensive-bit/">provides us</a> two virtual servers with 400 TB/month of free bandwidth to host and serve maps downloads and updates.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <a href="https://44plus.vn"><img src="docs/sponsors/44plus.svg" alt="44+ Technologies" width="200px"></a>
+    </td>
+    <td>
+      <a href="https://44plus.vn">44+ Technologies</a> is <a href="https://44plus.vn/organicmaps">providing us </a>with a free dedicated server worth around $12,000/year to serve maps across Vietnam & Southeast Asia.
     </td>
   </tr>
   <tr>
@@ -174,6 +174,7 @@ and [Google Play](https://play.google.com/store/apps/details?id=app.organicmaps)
 - Join our [Telegram Group](https://t.me/OrganicMaps) to discuss with other users.
   - Присоединяйтесь к нашей [русскоязычной группе в Telegram](https://t.me/OrganicMapsRu) для обратной связи и помощи.
   - Diğer kullanıcılarla tartışmak için [Telegram Grubumuza](https://t.me/OrganicMapsTR) katılın.
+  - Rejoignez notre groupe [Telegram](https://t.me/OrganicMapsFR) pour obtenir de l'aide.
 - Contact us by [email](mailto:hello@organicmaps.app).
 - Follow our updates in
 [Mastodon](https://fosstodon.org/@organicmaps),

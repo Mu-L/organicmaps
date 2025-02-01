@@ -8,6 +8,7 @@
 #include "editor/xml_feature.hpp"
 
 #include "indexer/editable_map_object.hpp"
+#include "indexer/edit_journal.hpp"
 #include "indexer/feature.hpp"
 #include "indexer/feature_source.hpp"
 #include "indexer/mwm_set.hpp"
@@ -15,6 +16,7 @@
 #include "geometry/rect2d.hpp"
 
 #include "base/atomic_shared_ptr.hpp"
+#include "base/thread_checker.hpp"
 #include "base/timer.hpp"
 
 #include <atomic>
@@ -130,6 +132,9 @@ public:
   /// @returns empty object if feature wasn't edited.
   std::optional<osm::EditableMapObject> GetEditedFeature(FeatureID const & fid) const;
 
+  /// @returns empty object if feature wasn't edited.
+  std::optional<osm::EditJournal> GetEditedFeatureJournal(FeatureID const & fid) const;
+
   /// @returns false if feature wasn't edited.
   /// @param outFeatureStreet is valid only if true was returned.
   bool GetEditedFeatureStreet(FeatureID const & fid, std::string & outFeatureStreet) const;
@@ -152,7 +157,7 @@ public:
   using ChangesetTags = std::map<std::string, std::string>;
   /// Tries to upload all local changes to OSM server in a separate thread.
   /// @param[in] tags should provide additional information about client to use in changeset.
-  void UploadChanges(std::string const & key, std::string const & secret, ChangesetTags tags,
+  void UploadChanges(std::string const & oauthToken, ChangesetTags tags,
                      FinishUploadCallback callBack = FinishUploadCallback());
   // TODO(mgsergio): Test new types from new config but with old classificator (where these types are absent).
   // Editor should silently ignore all types in config which are unknown to him.
@@ -233,6 +238,8 @@ private:
   static FeatureStatus GetFeatureStatusImpl(FeaturesContainer const & features, MwmId const & mwmId, uint32_t index);
 
   static bool IsFeatureUploadedImpl(FeaturesContainer const & features, MwmId const & mwmId, uint32_t index);
+
+  void UpdateXMLFeatureTags(editor::XMLFeature & feature, std::list<JournalEntry> const & journal);
 
   /// Deleted, edited and created features.
   base::AtomicSharedPtr<FeaturesContainer> m_features;

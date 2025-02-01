@@ -17,11 +17,11 @@ namespace android
 class Platform : public ::Platform
 {
 public:
+  ~Platform() override;
+
   void Initialize(JNIEnv * env, jobject functorProcessObject, jstring apkPath, jstring writablePath,
                   jstring privatePath, jstring tmpPath, jstring flavorName,
                   jstring buildType, bool isTablet);
-
-  ~Platform() override;
 
   void OnExternalStorageStatusChanged(bool isAvailable);
 
@@ -29,8 +29,6 @@ public:
   void SetSettingsDir(std::string const & dir);
 
   bool HasAvailableSpaceForWriting(uint64_t size) const;
-
-  void SetGuiThread(std::unique_ptr<base::TaskLoop> guiThread);
 
   class AndroidSecureStorage
   {
@@ -47,12 +45,12 @@ public:
 
   AndroidSecureStorage & GetSecureStorage() { return m_secureStorage; }
 
-  jobject GetContext() { return m_functorProcessObject; }
+  jobject GetContext() const;
 
   static Platform & Instance();
 
 private:
-  jobject m_functorProcessObject = nullptr;
   AndroidSecureStorage m_secureStorage;
+  jobject m_context;
 };
 } // namespace android

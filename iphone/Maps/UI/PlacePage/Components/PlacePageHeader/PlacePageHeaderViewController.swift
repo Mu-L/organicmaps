@@ -2,6 +2,7 @@ protocol PlacePageHeaderViewProtocol: AnyObject {
   var presenter: PlacePageHeaderPresenterProtocol?  { get set }
   var isExpandViewHidden: Bool { get set }
   var isShadowViewHidden: Bool { get set }
+  var isShareButtonHidden: Bool { get set }
 
   func setTitle(_ title: String?, secondaryTitle: String?)
 }
@@ -15,6 +16,9 @@ class PlacePageHeaderViewController: UIViewController {
   @IBOutlet private var shadowView: UIView!
   @IBOutlet private var grabberView: UIView!
 
+  @IBOutlet weak var closeButton: CircleImageButton!
+  @IBOutlet weak var shareButton: CircleImageButton!
+
   private var titleText: String?
   private var secondaryText: String?
 
@@ -27,6 +31,8 @@ class PlacePageHeaderViewController: UIViewController {
     iPadSpecific { [weak self] in
       self?.grabberView.isHidden = true
     }
+    closeButton.setImage(UIImage(named: "ic_close")!)
+    shareButton.setImage(UIImage(named: "ic_share")!)
   }
 
   @objc func onExpandPressed(sender: UITapGestureRecognizer) {
@@ -37,6 +43,10 @@ class PlacePageHeaderViewController: UIViewController {
     presenter?.onClosePress()
   }
 
+  @IBAction func onShareButtonPressed(_ sender: Any) {
+    presenter?.onShareButtonPress(from: shareButton)
+  }
+  
   override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
     super.traitCollectionDidChange(previousTraitCollection)
     guard traitCollection.userInterfaceStyle != previousTraitCollection?.userInterfaceStyle else { return }
@@ -60,6 +70,15 @@ extension PlacePageHeaderViewController: PlacePageHeaderViewProtocol {
     }
     set {
       shadowView.isHidden = newValue
+    }
+  }
+
+  var isShareButtonHidden: Bool {
+    get {
+      shareButton.isHidden
+    }
+    set {
+      shareButton.isHidden = newValue
     }
   }
 

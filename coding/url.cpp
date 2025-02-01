@@ -4,8 +4,6 @@
 #include "base/assert.hpp"
 #include "base/string_utils.hpp"
 
-#include <algorithm>
-#include <vector>
 
 namespace url
 {
@@ -21,7 +19,7 @@ Url::Url(std::string const & url)
 
 Url Url::FromString(std::string const & url)
 {
-  bool const hasProtocol = strings::StartsWith(url, "http://") || strings::StartsWith(url, "https://");
+  bool const hasProtocol = url.starts_with("http://") || url.starts_with("https://");
   return Url(hasProtocol ? url : "https://" + url);
 }
 

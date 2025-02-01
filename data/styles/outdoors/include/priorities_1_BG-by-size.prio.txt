@@ -37,14 +37,11 @@ leisure-swimming_pool-private                       # area z13- (also has icon z
 landuse-landfill                                    # area z15- (also has icon z15-, caption(optional) z15-)
 === 220
 
-sport-multi                                         # area z15- (also has icon z17-, caption(optional) z17-)
-sport-soccer                                        # area z15- (also has icon z17-, caption(optional) z17-)
-=== 210
-
 leisure-playground                                  # area z16- (also has icon z17-, caption(optional) z17-)
 === 200
 
 amenity-fountain                                    # area z16- (also has icon z16-, caption(optional) z16-)
+leisure-sports_centre                               # area z15- (also has icon z17-, caption(optional) z17-)
 === 190
 
 amenity-grave_yard                                  # area z14- (also has icon z17-, caption(optional) z17-)
@@ -64,6 +61,7 @@ aeroway-terminal                                    # area z14- (also has captio
 === 150
 
 leisure-golf_course                                 # area z12- (also has icon z15-, caption(optional) z17-)
+leisure-miniature_golf                              # area z14- (also has icon z17-, caption(optional) z17-)
 === 140
 
 landuse-flowerbed                                   # area z16-
@@ -116,6 +114,8 @@ landuse-village_green                               # area z12-
 landuse-vineyard                                    # area z12- (also has caption z15-)
 leisure-pitch                                       # area z15- (also has icon z17-, caption(optional) z17-)
 natural-bare_rock                                   # area z12- (also has caption z13-)
+natural-scree                                       # area z11-
+natural-shingle                                     # area z12-
 === 80
 
 leisure-garden                                      # area z12- (also has icon z16-, caption(optional) z16-)

@@ -14,7 +14,8 @@ namespace kml
 {
 namespace gpx
 {
-
+namespace
+{
 std::string_view constexpr kTrk = "trk";
 std::string_view constexpr kTrkSeg = "trkseg";
 std::string_view constexpr kRte = "rte";
@@ -30,7 +31,16 @@ std::string_view constexpr kDesc = "desc";
 std::string_view constexpr kMetadata = "metadata";
 std::string_view constexpr kEle = "ele";
 std::string_view constexpr kCmt = "cmt";
+std::string_view constexpr kTime = "time";
+
+std::string_view constexpr kGpxHeader =
+    "<?xml version=\"1.0\"?>\n"
+    "<gpx xmlns=\"http://www.topografix.com/GPX/1/1\" version=\"1.1\">\n";
+
+std::string_view constexpr kGpxFooter = "</gpx>";
+
 int constexpr kInvalidColor = 0;
+}  // namespace
 
 GpxParser::GpxParser(FileData & data)
 : m_data{data}
@@ -54,6 +64,7 @@ void GpxParser::ResetPoint()
   m_lat = 0.;
   m_lon = 0.;
   m_altitude = geometry::kInvalidAltitude;
+  m_timestamp = base::INVALID_TIME_STAMP;
 }
 
 bool GpxParser::MakeValid()
@@ -65,7 +76,7 @@ bool GpxParser::MakeValid()
     {
       // Set default name.
       if (m_name.empty())
-        m_name = kml::PointToString(m_org);
+        m_name = kml::PointToLineString(m_org);
 
       // Set default pin.
       if (m_predefinedColor == PredefinedColor::None)
@@ -204,6 +215,64 @@ void GpxParser::ParseGarminColor(std::string const & v)
   }
 }
 
+void GpxParser::CheckAndCorrectTimestamps()
+{
+  ASSERT_EQUAL(m_line.size(), m_timestamps.size(), ());
+
+  size_t const numInvalid = std::count(m_timestamps.begin(), m_timestamps.end(), base::INVALID_TIME_STAMP);
+  if (numInvalid * 2 > m_timestamps.size())
+  {
+    // >50% invalid
+    m_timestamps.clear();
+  }
+  else if (numInvalid > 0)
+  {
+    // Find INVALID_TIME_STAMP ranges and interpolate them.
+    for (size_t i = 0; i < m_timestamps.size();)
+    {
+      if (m_timestamps[i] == base::INVALID_TIME_STAMP)
+      {
+        size_t j = i + 1;
+        for (; j < m_timestamps.size(); ++j)
+        {
+          if (m_timestamps[j] != base::INVALID_TIME_STAMP)
+          {
+            if (i == 0)
+            {
+              // Beginning range assign to the first valid timestamp.
+              while (i < j)
+                m_timestamps[i++] = m_timestamps[j];
+            }
+            else
+            {
+              // naive interpolation
+              auto const last = m_timestamps[i-1];
+              auto count = j - i + 1;
+              double const delta = (m_timestamps[j] - last) / double(count);
+              for (size_t k = 1; k < count; ++k)
+                m_timestamps[i++] = last + k * delta;
+            }
+            break;
+          }
+        }
+
+        if (j == m_timestamps.size())
+        {
+          // Ending range assign to the last valid timestamp.
+          ASSERT(i > 0, ());
+          auto const last = m_timestamps[i-1];
+          while (i < j)
+            m_timestamps[i++] = last;
+        }
+
+        i = j + 1;
+      }
+      else
+        ++i;
+    }
+  }
+}
+
 void GpxParser::Pop(std::string_view tag)
 {
   ASSERT_EQUAL(m_tags.back(), tag, ());
@@ -212,12 +281,26 @@ void GpxParser::Pop(std::string_view tag)
   {
     m2::PointD const p = mercator::FromLatLon(m_lat, m_lon);
     if (m_line.empty() || !AlmostEqualAbs(m_line.back().GetPoint(), p, kMwmPointAccuracy))
+    {
       m_line.emplace_back(p, m_altitude);
+      m_timestamps.emplace_back(m_timestamp);
+    }
     m_altitude = geometry::kInvalidAltitude;
+    m_timestamp = base::INVALID_TIME_STAMP;
   }
   else if (tag == gpx::kTrkSeg || tag == gpx::kRte)
   {
-    m_geometry.m_lines.push_back(std::move(m_line));
+    if (m_line.size() > 1)
+    {
+      CheckAndCorrectTimestamps();
+
+      m_geometry.m_lines.push_back(std::move(m_line));
+      m_geometry.m_timestamps.push_back(std::move(m_timestamps));
+    }
+
+    // Clear segment (it may be incomplete).
+    m_line.clear();
+    m_timestamps.clear();
   }
   else if (tag == gpx::kWpt)
   {
@@ -252,6 +335,16 @@ void GpxParser::Pop(std::string_view tag)
       }
       else if (GEOMETRY_TYPE_LINE == m_geometryType)
       {
+#ifdef DEBUG
+        // Default gpx parser doesn't check points and timestamps count as the kml parser does.
+        for (size_t lineIndex = 0; lineIndex < m_geometry.m_lines.size(); ++lineIndex)
+        {
+          auto const pointsSize = m_geometry.m_lines[lineIndex].size();
+          auto const timestampsSize = m_geometry.m_timestamps[lineIndex].size();
+          ASSERT(!m_geometry.HasTimestampsFor(lineIndex) || pointsSize == timestampsSize, (pointsSize, timestampsSize));
+        }
+#endif
+
         TrackLayer layer;
         layer.m_lineWidth = kml::kDefaultTrackWidth;
         if (m_color != kInvalidColor)
@@ -274,6 +367,13 @@ void GpxParser::Pop(std::string_view tag)
     }
     ResetPoint();
   }
+
+  if (tag == gpx::kMetadata)
+  {
+    /// @todo(KK): Process the <metadata><time> tag.
+    m_timestamp = base::INVALID_TIME_STAMP;
+  }
+
   m_tags.pop_back();
 }
 
@@ -301,6 +401,8 @@ void GpxParser::CharData(std::string & value)
       ParseAltitude(value);
     else if (currTag == gpx::kCmt)
       m_comment = value;
+    else if (currTag == gpx::kTime)
+      ParseTimestamp(value);
   }
 }
 
@@ -349,6 +451,11 @@ void GpxParser::ParseAltitude(std::string const & value)
     m_altitude = geometry::kInvalidAltitude;
 }
 
+void GpxParser::ParseTimestamp(std::string const & value)
+{
+  m_timestamp = base::StringToTimestamp(value);
+}
+
 std::string GpxParser::BuildDescription() const
 {
   if (m_description.empty())
@@ -356,6 +463,145 @@ std::string GpxParser::BuildDescription() const
   else if (m_comment.empty() || m_description == m_comment)
     return m_description;
   return m_description + "\n\n" + m_comment;
+}
+
+namespace
+{
+
+std::string CoordToString(double c)
+{
+  std::ostringstream ss;
+  ss.precision(8);
+  ss << c;
+  return ss.str();
+}
+
+void SaveColorToRGB(Writer & writer, uint32_t rgba)
+{
+  writer << NumToHex(static_cast<uint8_t>(rgba >> 24 & 0xFF))
+         << NumToHex(static_cast<uint8_t>((rgba >> 16) & 0xFF))
+         << NumToHex(static_cast<uint8_t>((rgba >> 8) & 0xFF));
+}
+
+
+void SaveCategoryData(Writer & writer, CategoryData const & categoryData)
+{
+  writer << "<metadata>\n";
+  if (auto const name = GetDefaultLanguage(categoryData.m_name))
+    writer << kIndent2 << "<name>" << *name << "</name>\n";
+  if (auto const description = GetDefaultLanguage(categoryData.m_description))
+  {
+    writer << kIndent2 << "<desc>";
+    SaveStringWithCDATA(writer, *description);
+    writer << "</desc>\n";
+  }
+  writer << "</metadata>\n";
+}
+
+void SaveBookmarkData(Writer & writer, BookmarkData const & bookmarkData)
+{
+  auto const [lat, lon] = mercator::ToLatLon(bookmarkData.m_point);
+  writer << "<wpt lat=\"" << CoordToString(lat) << "\" lon=\"" << CoordToString(lon) << "\">\n";
+  // If user customized the default bookmark name, it's saved in m_customName.
+  auto name = GetDefaultLanguage(bookmarkData.m_customName);
+  if (!name)
+    name = GetDefaultLanguage(bookmarkData.m_name);  // Original POI name stored when bookmark was created.
+  if (name)
+  {
+    writer << kIndent2 << "<name>";
+    SaveStringWithCDATA(writer, *name);
+    writer << "</name>\n";
+  }
+  if (auto const description = GetDefaultLanguage(bookmarkData.m_description))
+  {
+    writer << kIndent2 << "<desc>";
+    SaveStringWithCDATA(writer, *description);
+    writer << "</desc>\n";
+  }
+  writer << "</wpt>\n";
+}
+
+bool TrackHasAltitudes(TrackData const & trackData)
+{
+  auto const & lines = trackData.m_geometry.m_lines;
+  if (lines.empty() || lines.front().empty())
+    return false;
+  auto const altitude = lines.front().front().GetAltitude();
+  return altitude != geometry::kDefaultAltitudeMeters && altitude != geometry::kInvalidAltitude;
+}
+
+uint32_t TrackColor(TrackData const & trackData)
+{
+  if (trackData.m_layers.empty())
+    return kDefaultTrackColor;
+  return trackData.m_layers.front().m_color.m_rgba;
+}
+
+void SaveTrackData(Writer & writer, TrackData const & trackData)
+{
+  writer << "<trk>\n";
+  auto name = GetDefaultLanguage(trackData.m_name);
+  if (name)
+  {
+    writer << kIndent2 << "<name>";
+    SaveStringWithCDATA(writer, *name);
+    writer << "</name>\n";
+  }
+  if (auto const description = GetDefaultLanguage(trackData.m_description))
+  {
+    writer << kIndent2 << "<desc>";
+    SaveStringWithCDATA(writer, *description);
+    writer << "</desc>\n";
+  }
+  if (auto const color = TrackColor(trackData); color != kDefaultTrackColor)
+  {
+    writer << kIndent2 << "<extensions>\n" << kIndent4 << "<color>";
+    SaveColorToRGB(writer, color);
+    writer << "</color>\n" << kIndent2 << "</extensions>\n";
+  }
+  bool const trackHasAltitude = TrackHasAltitudes(trackData);
+  auto const & geom = trackData.m_geometry;
+  for (size_t lineIndex = 0; lineIndex < geom.m_lines.size(); ++lineIndex)
+  {
+    auto const & line = geom.m_lines[lineIndex];
+    auto const & timestampsForLine = geom.m_timestamps[lineIndex];
+    auto const lineHasTimestamps = geom.HasTimestampsFor(lineIndex);
+
+    if (lineHasTimestamps)
+      CHECK_EQUAL(line.size(), timestampsForLine.size(), ());
+
+    writer << kIndent2 << "<trkseg>\n";
+
+    for (size_t pointIndex = 0; pointIndex < line.size(); ++pointIndex)
+    {
+      auto const & point = line[pointIndex];
+      auto const [lat, lon] = mercator::ToLatLon(point);
+
+      writer << kIndent4 << "<trkpt lat=\"" << CoordToString(lat) << "\" lon=\"" << CoordToString(lon) << "\">\n";
+
+      if (trackHasAltitude)
+        writer << kIndent6 << "<ele>" << CoordToString(point.GetAltitude()) << "</ele>\n";
+
+      if (lineHasTimestamps)
+        writer << kIndent6 << "<time>" << base::SecondsSinceEpochToString(timestampsForLine[pointIndex]) << "</time>\n";
+
+      writer << kIndent4 << "</trkpt>\n";
+    }
+    writer << kIndent2 << "</trkseg>\n";
+  }
+  writer << "</trk>\n";
+}
+}  // namespace
+
+void GpxWriter::Write(FileData const & fileData)
+{
+  m_writer << kGpxHeader;
+  SaveCategoryData(m_writer, fileData.m_categoryData);
+  for (auto const & bookmarkData : fileData.m_bookmarksData)
+    SaveBookmarkData(m_writer, bookmarkData);
+  for (auto const & trackData : fileData.m_tracksData)
+    SaveTrackData(m_writer, trackData);
+  m_writer << kGpxFooter;
 }
 
 }  // namespace gpx

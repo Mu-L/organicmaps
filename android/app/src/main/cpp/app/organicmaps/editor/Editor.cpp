@@ -149,7 +149,8 @@ Java_app_organicmaps_editor_Editor_nativeHasWifi(JNIEnv *, jclass)
 JNIEXPORT void JNICALL
 Java_app_organicmaps_editor_Editor_nativeSetHasWifi(JNIEnv *, jclass, jboolean hasWifi)
 {
-  g_editableMapObject.SetInternet(hasWifi ? feature::Internet::Wlan : feature::Internet::Unknown);
+  if (hasWifi != (g_editableMapObject.GetInternet() == feature::Internet::Wlan))
+    g_editableMapObject.SetInternet(hasWifi ? feature::Internet::Wlan : feature::Internet::Unknown);
 }
 
 JNIEXPORT jboolean JNICALL
@@ -178,6 +179,16 @@ Java_app_organicmaps_editor_Editor_nativeShouldShowEditPlace(JNIEnv *, jclass)
 }
 
 JNIEXPORT jboolean JNICALL
+Java_app_organicmaps_editor_Editor_nativeShouldShowAddBusiness(JNIEnv *, jclass)
+{
+  ::Framework * frm = g_framework->NativeFramework();
+  if (!frm->HasPlacePageInfo())
+    return static_cast<jboolean>(false);
+
+  return g_framework->GetPlacePageInfo().ShouldShowAddBusiness();
+}
+
+JNIEXPORT jboolean JNICALL
 Java_app_organicmaps_editor_Editor_nativeShouldShowAddPlace(JNIEnv *, jclass)
 {
   ::Framework * frm = g_framework->NativeFramework();
@@ -188,13 +199,23 @@ Java_app_organicmaps_editor_Editor_nativeShouldShowAddPlace(JNIEnv *, jclass)
 }
 
 JNIEXPORT jboolean JNICALL
-Java_app_organicmaps_editor_Editor_nativeShouldShowAddBusiness(JNIEnv *, jclass)
+Java_app_organicmaps_editor_Editor_nativeShouldEnableEditPlace(JNIEnv *, jclass)
 {
   ::Framework * frm = g_framework->NativeFramework();
   if (!frm->HasPlacePageInfo())
     return static_cast<jboolean>(false);
 
-  return g_framework->GetPlacePageInfo().ShouldShowAddBusiness();
+  return g_framework->GetPlacePageInfo().ShouldEnableEditPlace();
+}
+
+JNIEXPORT jboolean JNICALL
+Java_app_organicmaps_editor_Editor_nativeShouldEnableAddPlace(JNIEnv *, jclass)
+{
+  ::Framework * frm = g_framework->NativeFramework();
+  if (!frm->HasPlacePageInfo())
+    return static_cast<jboolean>(false);
+
+  return g_framework->GetPlacePageInfo().ShouldEnableAddPlace();
 }
 
 JNIEXPORT jintArray JNICALL
@@ -236,26 +257,14 @@ Java_app_organicmaps_editor_Editor_nativeIsBuilding(JNIEnv * env, jclass clazz)
 }
 
 JNIEXPORT jobject JNICALL
-Java_app_organicmaps_editor_Editor_nativeGetNamesDataSource(JNIEnv * env, jclass, jboolean needFakes)
+Java_app_organicmaps_editor_Editor_nativeGetNamesDataSource(JNIEnv * env, jclass)
 {
-  auto const namesDataSource = g_editableMapObject.GetNamesDataSource(needFakes);
+  auto const namesDataSource = g_editableMapObject.GetNamesDataSource();
 
   jobjectArray names = jni::ToJavaArray(env, g_localNameClazz, namesDataSource.names, ToJavaName);
   jsize const mandatoryNamesCount = static_cast<jsize>(namesDataSource.mandatoryNamesCount);
 
   return env->NewObject(g_namesDataSourceClassID, g_namesDataSourceConstructorID, names, mandatoryNamesCount);
-}
-
-JNIEXPORT jstring JNICALL
-Java_app_organicmaps_editor_Editor_nativeGetDefaultName(JNIEnv * env, jclass)
-{
-  return jni::ToJavaString(env, g_editableMapObject.GetDefaultName());
-}
-
-JNIEXPORT void JNICALL
-Java_app_organicmaps_editor_Editor_nativeEnableNamesAdvancedMode(JNIEnv *, jclass)
-{
-  g_editableMapObject.EnableNamesAdvancedMode();
 }
 
 JNIEXPORT void JNICALL
@@ -289,14 +298,14 @@ Java_app_organicmaps_editor_Editor_nativeGetNearbyStreets(JNIEnv * env, jclass c
 }
 
 JNIEXPORT jobjectArray JNICALL
-Java_app_organicmaps_editor_Editor_nativeGetSupportedLanguages(JNIEnv * env, jclass clazz)
+Java_app_organicmaps_editor_Editor_nativeGetSupportedLanguages(JNIEnv * env, jclass clazz, jboolean includeServiceLangs)
 {
   using TLang = StringUtf8Multilang::Lang;
   //public Language(@NonNull String code, @NonNull String name)
   static jclass const langClass = jni::GetGlobalClassRef(env, "app/organicmaps/editor/data/Language");
   static jmethodID const langCtor = jni::GetConstructorID(env, langClass, "(Ljava/lang/String;Ljava/lang/String;)V");
 
-  return jni::ToJavaArray(env, langClass, StringUtf8Multilang::GetSupportedLanguages(),
+  return jni::ToJavaArray(env, langClass, StringUtf8Multilang::GetSupportedLanguages(includeServiceLangs),
                           [](JNIEnv * env, TLang const & lang)
                           {
                             jni::TScopedLocalRef const code(env, jni::ToJavaString(env, lang.m_code));
@@ -324,11 +333,10 @@ Java_app_organicmaps_editor_Editor_nativeHasSomethingToUpload(JNIEnv * env, jcla
 }
 
 JNIEXPORT void JNICALL
-Java_app_organicmaps_editor_Editor_nativeUploadChanges(JNIEnv * env, jclass clazz, jstring token, jstring secret,
-    jstring appVersion, jstring appId)
+Java_app_organicmaps_editor_Editor_nativeUploadChanges(JNIEnv * env, jclass clazz, jstring token, jstring appVersion, jstring appId)
 {
   // TODO: Handle upload status in callback
-  Editor::Instance().UploadChanges(jni::ToNativeString(env, token), jni::ToNativeString(env, secret),
+  Editor::Instance().UploadChanges(jni::ToNativeString(env, token),
       {{"created_by", "Organic Maps " OMIM_OS_NAME " " + jni::ToNativeString(env, appVersion)},
        {"bundle_id", jni::ToNativeString(env, appId)}}, nullptr);
 }
@@ -355,7 +363,11 @@ Java_app_organicmaps_editor_Editor_nativeStartEdit(JNIEnv *, jclass)
 {
   ::Framework * frm = g_framework->NativeFramework();
   if (!frm->HasPlacePageInfo())
+  {
+    ASSERT(g_editableMapObject.GetEditingLifecycle() == osm::EditingLifecycle::CREATED,
+           ("PlacePageInfo should only be empty for new features."));
     return;
+  }
 
   place_page::Info const & info = g_framework->GetPlacePageInfo();
   CHECK(frm->GetEditableMapObject(info.GetID(), g_editableMapObject), ("Invalid feature in the place page."));
@@ -399,8 +411,10 @@ Java_app_organicmaps_editor_Editor_nativeGetAllCreatableFeatureTypes(JNIEnv * en
                                                                          jstring jLang)
 {
   std::string const & lang = jni::ToNativeString(env, jLang);
-  GetFeatureCategories().AddLanguage(lang);
-  return jni::ToJavaStringArray(env, GetFeatureCategories().GetAllCreatableTypeNames());
+  auto & categories = GetFeatureCategories();
+  categories.AddLanguage(lang);
+  categories.AddLanguage("en");
+  return jni::ToJavaStringArray(env, categories.GetAllCreatableTypeNames());
 }
 
 JNIEXPORT jobjectArray JNICALL
@@ -409,9 +423,10 @@ Java_app_organicmaps_editor_Editor_nativeSearchCreatableFeatureTypes(JNIEnv * en
                                                                          jstring jLang)
 {
   std::string const & lang = jni::ToNativeString(env, jLang);
-  GetFeatureCategories().AddLanguage(lang);
-  return jni::ToJavaStringArray(env,
-                                GetFeatureCategories().Search(jni::ToNativeString(env, query)));
+  auto & categories = GetFeatureCategories();
+  categories.AddLanguage(lang);
+  categories.AddLanguage("en");
+  return jni::ToJavaStringArray(env, categories.Search(jni::ToNativeString(env, query)));
 }
 
 JNIEXPORT jobjectArray JNICALL

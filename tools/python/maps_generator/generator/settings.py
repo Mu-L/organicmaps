@@ -97,7 +97,7 @@ NODE_STORAGE = "mem" if total_virtual_memory() / 10 ** 9 >= 64 else "map"
 # Stages section:
 NEED_PLANET_UPDATE = False
 THREADS_COUNT_FEATURES_STAGE = multiprocessing.cpu_count()
-DATA_ARCHIVE_DIR = USER_RESOURCE_PATH
+DATA_ARCHIVE_DIR = ""
 DIFF_VERSION_DEPTH = 2
 
 # Logging section:
@@ -120,6 +120,7 @@ UK_POSTCODES_URL = ""
 US_POSTCODES_URL = ""
 SRTM_PATH = ""
 ISOLINES_PATH = ""
+ADDRESSES_PATH = ""
 
 # Stats section:
 STATS_TYPES_CONFIG = os.path.join(ETC_DIR, "stats_types_config.txt")
@@ -212,6 +213,8 @@ def init(default_settings_path: AnyStr):
     )
     NODE_STORAGE = cfg.get_opt("Generator tool", "NODE_STORAGE", NODE_STORAGE)
 
+    assert os.path.exists(OMIM_PATH) is True, f"Can't find OMIM_PATH (set to {OMIM_PATH})"
+
     if not os.path.exists(USER_RESOURCE_PATH):
         from data_files import find_data_files
 
@@ -232,11 +235,11 @@ def init(default_settings_path: AnyStr):
     global THREADS_COUNT_FEATURES_STAGE
     NEED_PLANET_UPDATE = cfg.get_opt("Stages", "NEED_PLANET_UPDATE", NEED_PLANET_UPDATE)
     DATA_ARCHIVE_DIR = cfg.get_opt_path(
-        "Generator tool", "DATA_ARCHIVE_DIR", DATA_ARCHIVE_DIR
+        "Stages", "DATA_ARCHIVE_DIR", DATA_ARCHIVE_DIR
     )
-    DIFF_VERSION_DEPTH = cfg.get_opt(
-        "Generator tool", "DIFF_VERSION_DEPTH", DIFF_VERSION_DEPTH
-    )
+    DIFF_VERSION_DEPTH = int(cfg.get_opt(
+        "Stages", "DIFF_VERSION_DEPTH", DIFF_VERSION_DEPTH
+    ))
 
     threads_count = int(
         cfg.get_opt(
@@ -274,6 +277,7 @@ def init(default_settings_path: AnyStr):
     global FOOD_TRANSLATIONS_URL
     global SRTM_PATH
     global ISOLINES_PATH
+    global ADDRESSES_PATH
 
     PLANET_URL = cfg.get_opt_path("External", "PLANET_URL", PLANET_URL)
     PLANET_MD5_URL = cfg.get_opt_path("External", "PLANET_MD5_URL", md5_ext(PLANET_URL))
@@ -301,6 +305,7 @@ def init(default_settings_path: AnyStr):
     )
     SRTM_PATH = cfg.get_opt_path("External", "SRTM_PATH", SRTM_PATH)
     ISOLINES_PATH = cfg.get_opt_path("External", "ISOLINES_PATH", ISOLINES_PATH)
+    ADDRESSES_PATH = cfg.get_opt_path("External", "ADDRESSES_PATH", ADDRESSES_PATH)
 
     # Stats section:
     global STATS_TYPES_CONFIG

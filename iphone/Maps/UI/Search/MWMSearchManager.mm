@@ -54,7 +54,6 @@ const CGFloat kWidthForiPad = 320;
 @property(nonatomic) MWMNoMapsViewController *noMapsController;
 
 @property(nonatomic) Observers *observers;
-@property(nonatomic) NSDateFormatter *dateFormatter;
 
 @end
 
@@ -70,8 +69,6 @@ const CGFloat kWidthForiPad = 320;
     self.state = MWMSearchManagerStateHidden;
     [MWMSearch addObserver:self];
     _observers = [Observers weakObjectsHashTable];
-    _dateFormatter = [[NSDateFormatter alloc] init];
-    _dateFormatter.dateFormat = @"yyyy-MM-dd";
   }
   return self;
 }
@@ -216,7 +213,7 @@ const CGFloat kWidthForiPad = 320;
   [self.navigationController popToRootViewControllerAnimated:NO];
 
   self.searchBarView.state = SearchBarStateReady;
-  GetFramework().DeactivateMapSelection(true);
+  GetFramework().DeactivateMapSelection();
   [self animateConstraints:^{
     self.contentViewTopHidden.priority = UILayoutPriorityDefaultLow;
     self.contentViewBottomHidden.priority = UILayoutPriorityDefaultLow;
@@ -237,7 +234,7 @@ const CGFloat kWidthForiPad = 320;
   [self.navigationController popToRootViewControllerAnimated:NO];
 
   self.searchBarView.state = SearchBarStateReady;
-  GetFramework().DeactivateMapSelection(true);
+  GetFramework().DeactivateMapSelection();
   [self updateTableSearchActionBar];
   auto const navigationManagerState = [MWMNavigationDashboardManager sharedManager].state;
   if (navigationManagerState == MWMNavigationDashboardStateHidden) {
@@ -265,7 +262,7 @@ const CGFloat kWidthForiPad = 320;
   auto const navigationManagerState = [MWMNavigationDashboardManager sharedManager].state;
   [self viewHidden:navigationManagerState != MWMNavigationDashboardStateHidden];
   self.controlsManager.menuState = MWMBottomMenuStateHidden;
-  GetFramework().DeactivateMapSelection(true);
+  GetFramework().DeactivateMapSelection();
   [MWMSearch setSearchOnMap:YES];
   [self.tableViewController reloadData];
 

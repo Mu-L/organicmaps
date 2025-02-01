@@ -4,6 +4,10 @@ include(OmimConfig)
 function(omim_add_executable executable)
   add_executable(${executable} ${ARGN})
 
+  if (PLATFORM_WIN)
+    target_sources(${executable} PRIVATE "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/windows/OrganicMaps.manifest")
+  endif()
+
   # Enable warnings for all our binaries.
   target_compile_options(${executable} PRIVATE ${OMIM_WARNING_FLAGS})
   target_include_directories(${executable} SYSTEM PRIVATE ${3PARTY_INCLUDE_DIRS})
@@ -173,8 +177,8 @@ function(add_precompiled_headers header pch_target_name)
   export_directory_flags("${pch_flags_file}")
   set(compiler_flags "@${pch_flags_file}")
 
-  # CMAKE_CXX_STANDARD 17 flags:
-  set(c_standard_flags "-std=c++17")
+  # CMAKE_CXX_STANDARD 20 flags:
+  set(c_standard_flags "-std=c++20")
   get_filename_component(pch_file_name ${header} NAME)
 
   add_pic_pch_target(${header} ${pch_target_name} ${pch_file_name} lib "-fPIC")

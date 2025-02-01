@@ -130,13 +130,18 @@ platform::NetworkPolicy GetCurrentNetworkPolicy()
 
 namespace android
 {
-void Platform::Initialize(JNIEnv * env, jobject functorProcessObject, jstring apkPath,
+Platform::~Platform()
+{
+  JNIEnv *env = jni::GetEnv();
+  env->DeleteGlobalRef(m_context);
+}
+
+void Platform::Initialize(JNIEnv * env, jobject context, jstring apkPath,
                           jstring writablePath, jstring privatePath, jstring tmpPath,
                           jstring flavorName, jstring buildType, bool isTablet)
 {
-  m_functorProcessObject = env->NewGlobalRef(functorProcessObject);
-
-  m_guiThread = std::make_unique<GuiThread>(m_functorProcessObject);
+  m_context = env->NewGlobalRef(context);
+  m_guiThread = std::make_unique<GuiThread>();
 
   std::string const flavor = jni::ToNativeString(env, flavorName);
   std::string const build = jni::ToNativeString(env, buildType);
@@ -152,14 +157,6 @@ void Platform::Initialize(JNIEnv * env, jobject functorProcessObject, jstring ap
 
   // IMPORTANT: This method SHOULD be called from UI thread to cache static jni ID-s inside.
   (void) ConnectionStatus();
-}
-
-Platform::~Platform()
-{
-  JNIEnv * env = jni::GetEnv();
-
-  if (m_functorProcessObject)
-    env->DeleteGlobalRef(m_functorProcessObject);
 }
 
 void Platform::OnExternalStorageStatusChanged(bool isAvailable)
@@ -188,6 +185,11 @@ Platform & Platform::Instance()
 {
   static Platform platform;
   return platform;
+}
+
+jobject Platform::GetContext() const
+{
+  return m_context;
 }
 
 void Platform::AndroidSecureStorage::Init(JNIEnv * env)

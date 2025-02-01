@@ -84,7 +84,7 @@ public class BookmarkCategoriesAdapter extends BaseBookmarkCategoryAdapter<Recyc
       }
       case TYPE_ACTION_ADD ->
       {
-        View item = inflater.inflate(R.layout.item_bookmark_create_group, parent, false);
+        View item = inflater.inflate(R.layout.item_bookmark_button, parent, false);
         item.setOnClickListener(v -> {
           if (mCategoryListCallback != null)
             mCategoryListCallback.onAddButtonClick();
@@ -93,7 +93,7 @@ public class BookmarkCategoriesAdapter extends BaseBookmarkCategoryAdapter<Recyc
       }
       case TYPE_ACTION_IMPORT ->
       {
-        View item = inflater.inflate(R.layout.item_bookmark_import, parent, false);
+        View item = inflater.inflate(R.layout.item_bookmark_button, parent, false);
         item.setOnClickListener(v -> {
           if (mCategoryListCallback != null)
             mCategoryListCallback.onImportButtonClick();
@@ -102,7 +102,7 @@ public class BookmarkCategoriesAdapter extends BaseBookmarkCategoryAdapter<Recyc
       }
       case TYPE_ACTION_EXPORT_ALL_AS_KMZ ->
       {
-        View item = inflater.inflate(R.layout.item_bookmark_export, parent, false);
+        View item = inflater.inflate(R.layout.item_bookmark_button, parent, false);
         item.setOnClickListener(v -> {
           if (mCategoryListCallback != null)
             mCategoryListCallback.onExportButtonClick();
@@ -142,7 +142,7 @@ public class BookmarkCategoriesAdapter extends BaseBookmarkCategoryAdapter<Recyc
       case TYPE_ACTION_ADD ->
       {
         Holders.GeneralViewHolder generalViewHolder = (Holders.GeneralViewHolder) holder;
-        generalViewHolder.getImage().setImageResource(R.drawable.ic_import);
+        generalViewHolder.getImage().setImageResource(R.drawable.ic_add_list);
         generalViewHolder.getText().setText(R.string.bookmarks_create_new_group);
       }
       case TYPE_ACTION_IMPORT ->

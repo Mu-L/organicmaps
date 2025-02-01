@@ -272,7 +272,7 @@ SessionState RoutingSession::OnLocationPositionChanged(GpsInfo const & info)
   if (!m_route->IsValid())
     return m_state;
 
-  m_turnNotificationsMgr.SetSpeedMetersPerSecond(info.m_speedMpS);
+  m_turnNotificationsMgr.SetSpeedMetersPerSecond(info.m_speed);
 
   auto const formerIter = m_route->GetCurrentIteratorTurn();
   if (m_route->MoveIterator(info))
@@ -318,7 +318,7 @@ SessionState RoutingSession::OnLocationPositionChanged(GpsInfo const & info)
     if (base::AlmostEqualAbs(dist, m_lastDistance, kRunawayDistanceSensitivityMeters))
       return m_state;
 
-    if (!info.HasSpeed() || info.m_speedMpS < m_routingSettings.m_minSpeedForRouteRebuildMpS)
+    if (!info.HasSpeed() || info.m_speed < m_routingSettings.m_minSpeedForRouteRebuildMpS)
       m_moveAwayCounter += 1;
     else
       m_moveAwayCounter += 2;
@@ -417,33 +417,27 @@ void RoutingSession::GetRouteFollowingInfo(FollowingInfo & info) const
 
   info.m_exitNum = turn.m_exitNum;
   info.m_time = static_cast<int>(std::max(kMinimumETASec, m_route->GetCurrentTimeToEndSec()));
-  RouteSegment::RoadNameInfo sourceRoadNameInfo, targetRoadNameInfo;
-  m_route->GetCurrentStreetName(sourceRoadNameInfo);
-  GetFullRoadName(sourceRoadNameInfo, info.m_sourceName);
-  m_route->GetNextTurnStreetName(targetRoadNameInfo);
-  GetFullRoadName(targetRoadNameInfo, info.m_targetName);
+  RouteSegment::RoadNameInfo currentRoadNameInfo, nextRoadNameInfo, nextNextRoadNameInfo;
+  m_route->GetCurrentStreetName(currentRoadNameInfo);
+  GetFullRoadName(currentRoadNameInfo, info.m_currentStreetName);
+  m_route->GetNextTurnStreetName(nextRoadNameInfo);
+  GetFullRoadName(nextRoadNameInfo, info.m_nextStreetName);
+  m_route->GetNextNextTurnStreetName(nextNextRoadNameInfo);
+  GetFullRoadName(nextNextRoadNameInfo, info.m_nextNextStreetName);
 
   info.m_completionPercent = GetCompletionPercent();
 
-  double const timeToNearestTurnSec = m_route->GetCurrentTimeToNearestTurnSec();
-
-  // Lane information and next street name.
-  if (distanceToTurnMeters < kShowLanesMinDistInMeters || timeToNearestTurnSec < 60.0)
+  // Lane information
+  info.m_lanes.clear();
+  if (distanceToTurnMeters < kShowLanesMinDistInMeters || m_route->GetCurrentTimeToNearestTurnSec() < 60.0)
   {
-    info.m_displayedStreetName = info.m_targetName;
     // There are two nested loops below. Outer one is for lanes and inner one (ctor of
     // SingleLaneInfo) is
     // for each lane's directions. The size of turn.m_lanes is relatively small. Less than 10 in
     // most cases.
-    info.m_lanes.clear();
     info.m_lanes.reserve(turn.m_lanes.size());
     for (size_t j = 0; j < turn.m_lanes.size(); ++j)
       info.m_lanes.emplace_back(turn.m_lanes[j]);
-  }
-  else
-  {
-    info.m_displayedStreetName = "";
-    info.m_lanes.clear();
   }
 
   // Pedestrian info.
@@ -483,7 +477,7 @@ void RoutingSession::PassCheckpoints()
   }
 }
 
-void RoutingSession::GenerateNotifications(std::vector<std::string> & notifications)
+void RoutingSession::GenerateNotifications(std::vector<std::string> & notifications, bool announceStreets)
 {
   CHECK_THREAD_CHECKER(m_threadChecker, ());
   notifications.clear();
@@ -500,7 +494,15 @@ void RoutingSession::GenerateNotifications(std::vector<std::string> & notificati
   // Generate turns notifications.
   std::vector<turns::TurnItemDist> turns;
   if (m_route->GetNextTurns(turns))
-    m_turnNotificationsMgr.GenerateTurnNotifications(turns, notifications);
+  {
+    RouteSegment::RoadNameInfo nextStreetInfo;
+
+    // only populate nextStreetInfo if TtsStreetNames is enabled
+    if (announceStreets)
+      m_route->GetNextTurnStreetName(nextStreetInfo);
+
+    m_turnNotificationsMgr.GenerateTurnNotifications(turns, notifications, nextStreetInfo);
+  }
 
   m_speedCameraManager.GenerateNotifications(notifications);
 }

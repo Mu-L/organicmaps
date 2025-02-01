@@ -11,12 +11,13 @@ import androidx.annotation.AttrRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import app.organicmaps.R;
 import app.organicmaps.util.Graphics;
-import app.organicmaps.util.UiUtils;
+import app.organicmaps.util.WindowInsetUtils.PaddingInsetsListener;
 import app.organicmaps.util.bottomsheet.MenuBottomSheetFragment;
 
 import java.util.ArrayList;
@@ -44,10 +45,11 @@ public final class PlacePageButtons extends Fragment implements Observer<List<Pl
   {
     super.onViewCreated(view, savedInstanceState);
     mButtonsContainer = view.findViewById(R.id.container);
-    ViewCompat.setOnApplyWindowInsetsListener(view, (v, windowInsets) -> {
-      UiUtils.setViewInsetsPaddingNoTop(v, windowInsets);
-      return windowInsets;
-    });
+    final PaddingInsetsListener insetsListener = new PaddingInsetsListener.Builder()
+        .setInsetsTypeMask(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout())
+        .setExcludeTop()
+        .build();
+    ViewCompat.setOnApplyWindowInsetsListener(view, insetsListener);
     mMaxButtons = getResources().getInteger(R.integer.pp_buttons_max);
 
     Fragment parentFragment = getParentFragment();

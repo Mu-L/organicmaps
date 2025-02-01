@@ -56,12 +56,12 @@
 #include "base/math.hpp"
 #include "base/sunrise_sunset.hpp"
 
+#include "ge0/url_generator.hpp"
+
 #include "3party/open-location-code/openlocationcode.h"
 
-#include <cstdint>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include <android/api-level.h>
@@ -94,8 +94,7 @@ jobject g_placePageActivationListener = nullptr;
 
 android::AndroidVulkanContextFactory * CastFactory(drape_ptr<dp::GraphicsContextFactory> const & f)
 {
-  ASSERT(dynamic_cast<android::AndroidVulkanContextFactory *>(f.get()) != nullptr, ());
-  return static_cast<android::AndroidVulkanContextFactory *>(f.get());
+  return dynamic_cast<android::AndroidVulkanContextFactory *>(f.get());
 }
 }  // namespace
 
@@ -176,7 +175,7 @@ bool Framework::DestroySurfaceOnDetach()
 }
 
 bool Framework::CreateDrapeEngine(JNIEnv * env, jobject jSurface, int densityDpi, bool firstLaunch,
-                                  bool launchByDeepLink, uint32_t appVersionCode)
+                                  bool launchByDeepLink, uint32_t appVersionCode, bool isCustomROM)
 {
   // Vulkan is supported only since Android 8.0, because some Android devices with Android 7.x
   // have fatal driver issue, which can lead to process termination and whole OS destabilization.
@@ -188,57 +187,51 @@ bool Framework::CreateDrapeEngine(JNIEnv * env, jobject jSurface, int densityDpi
   if (vulkanForbidden)
     LOG(LWARNING, ("Vulkan API is forbidden on this device."));
 
+  m_vulkanContextFactory.reset();
+  m_oglContextFactory.reset();
+  ::Framework::DrapeCreationParams p;
+
   if (m_work.LoadPreferredGraphicsAPI() == dp::ApiVersion::Vulkan && !vulkanForbidden)
   {
-    m_vulkanContextFactory =
-        make_unique_dp<AndroidVulkanContextFactory>(appVersionCode, sdkVersion);
-    if (!CastFactory(m_vulkanContextFactory)->IsVulkanSupported())
+    auto vkFactory = make_unique_dp<AndroidVulkanContextFactory>(appVersionCode, sdkVersion, isCustomROM);
+    if (!vkFactory->IsVulkanSupported())
     {
       LOG(LWARNING, ("Vulkan API is not supported."));
-      m_vulkanContextFactory.reset();
     }
-
-    if (m_vulkanContextFactory)
+    else
     {
-      auto f = CastFactory(m_vulkanContextFactory);
-      f->SetSurface(env, jSurface);
-      if (!f->IsValid())
+      vkFactory->SetSurface(env, jSurface);
+      if (!vkFactory->IsValid())
       {
         LOG(LWARNING, ("Invalid Vulkan API context."));
-        m_vulkanContextFactory.reset();
+      }
+      else
+      {
+        p.m_apiVersion = dp::ApiVersion::Vulkan;
+        p.m_surfaceWidth = vkFactory->GetWidth();
+        p.m_surfaceHeight = vkFactory->GetHeight();
+
+        m_vulkanContextFactory = std::move(vkFactory);
       }
     }
   }
 
-  AndroidOGLContextFactory * oglFactory = nullptr;
   if (!m_vulkanContextFactory)
   {
-    m_oglContextFactory = make_unique_dp<dp::ThreadSafeFactory>(
-      new AndroidOGLContextFactory(env, jSurface));
-    oglFactory = m_oglContextFactory->CastFactory<AndroidOGLContextFactory>();
+    auto oglFactory = make_unique_dp<AndroidOGLContextFactory>(env, jSurface);
     if (!oglFactory->IsValid())
     {
       LOG(LWARNING, ("Invalid GL context."));
       return false;
     }
-  }
-
-  ::Framework::DrapeCreationParams p;
-  if (m_vulkanContextFactory)
-  {
-    auto f = CastFactory(m_vulkanContextFactory);
-    p.m_apiVersion = dp::ApiVersion::Vulkan;
-    p.m_surfaceWidth = f->GetWidth();
-    p.m_surfaceHeight = f->GetHeight();
-  }
-  else
-  {
-    CHECK(oglFactory != nullptr, ());
     p.m_apiVersion = oglFactory->IsSupportedOpenGLES3() ? dp::ApiVersion::OpenGLES3 :
                                                           dp::ApiVersion::OpenGLES2;
     p.m_surfaceWidth = oglFactory->GetWidth();
     p.m_surfaceHeight = oglFactory->GetHeight();
+
+    m_oglContextFactory = make_unique_dp<dp::ThreadSafeFactory>(oglFactory.release());
   }
+
   p.m_visualScale = static_cast<float>(dp::VisualScale(densityDpi));
   // Drape doesn't care about Editor vs Api mode differences.
   p.m_isChoosePositionMode = m_isChoosePositionMode != ChoosePositionMode::None;
@@ -450,12 +443,21 @@ void Framework::Get3dMode(bool & allow3d, bool & allow3dBuildings)
   m_work.Load3dMode(allow3d, allow3dBuildings);
 }
 
-void Framework::SetChoosePositionMode(ChoosePositionMode mode, bool isBusiness,
-                                      bool hasPosition, m2::PointD const & position)
+void Framework::SetMapLanguageCode(std::string const & languageCode)
+{
+  m_work.SetMapLanguageCode(languageCode);
+}
+
+std::string Framework::GetMapLanguageCode()
+{
+  return m_work.GetMapLanguageCode();
+}
+
+void Framework::SetChoosePositionMode(ChoosePositionMode mode, bool isBusiness, m2::PointD const * optionalPosition)
 {
   m_isChoosePositionMode = mode;
   m_work.BlockTapEvents(mode != ChoosePositionMode::None);
-  m_work.EnableChoosePositionMode(mode != ChoosePositionMode::None, isBusiness, hasPosition, position);
+  m_work.EnableChoosePositionMode(mode != ChoosePositionMode::None, isBusiness, optionalPosition);
 }
 
 ChoosePositionMode Framework::GetChoosePositionMode()
@@ -584,9 +586,24 @@ void Framework::ReplaceBookmark(kml::MarkId markId, kml::BookmarkData & bm)
   m_work.GetBookmarkManager().GetEditSession().UpdateBookmark(markId, bm);
 }
 
+void Framework::ReplaceTrack(kml::TrackId trackId, kml::TrackData & trackData)
+{
+  m_work.GetBookmarkManager().GetEditSession().UpdateTrack(trackId, trackData);
+}
+
+void Framework::ChangeTrackColor(kml::TrackId trackId, dp::Color color)
+{
+  m_work.GetBookmarkManager().GetEditSession().ChangeTrackColor(trackId, color);
+}
+
 void Framework::MoveBookmark(kml::MarkId markId, kml::MarkGroupId curCat, kml::MarkGroupId newCat)
 {
   m_work.GetBookmarkManager().GetEditSession().MoveBookmark(markId, curCat, newCat);
+}
+
+void Framework::MoveTrack(kml::TrackId trackId, kml::MarkGroupId curCat, kml::MarkGroupId newCat)
+{
+  m_work.GetBookmarkManager().GetEditSession().MoveTrack(trackId, curCat, newCat);
 }
 
 void Framework::ExecuteMapApiRequest()
@@ -596,7 +613,12 @@ void Framework::ExecuteMapApiRequest()
 
 void Framework::DeactivatePopup()
 {
-  m_work.DeactivateMapSelection(false);
+  m_work.DeactivateMapSelection();
+}
+
+void Framework::DeactivateMapSelectionCircle()
+{
+  m_work.DeactivateMapSelectionCircle();
 }
 
 /*
@@ -860,6 +882,13 @@ Java_app_organicmaps_Framework_nativeGetParsedAppName(JNIEnv * env, jclass)
 }
 
 JNIEXPORT jstring JNICALL
+Java_app_organicmaps_Framework_nativeGetParsedOAuth2Code(JNIEnv * env, jclass)
+{
+  std::string const & code = frm()->GetParsedOAuth2Code();
+  return jni::ToJavaString(env, code);
+}
+
+JNIEXPORT jstring JNICALL
 Java_app_organicmaps_Framework_nativeGetParsedBackUrl(JNIEnv * env, jclass)
 {
   std::string const & backUrl = frm()->GetParsedBackUrl();
@@ -881,8 +910,7 @@ Java_app_organicmaps_Framework_nativeGetParsedCenterLatLon(JNIEnv * env, jclass)
 }
 
 JNIEXPORT void JNICALL
-Java_app_organicmaps_Framework_nativePlacePageActivationListener(JNIEnv *env, jclass clazz,
-                                                                     jobject jListener)
+Java_app_organicmaps_Framework_nativePlacePageActivationListener(JNIEnv *env, jclass, jobject jListener)
 {
   LOG(LINFO, ("Set global map object listener"));
   g_placePageActivationListener = env->NewGlobalRef(jListener);
@@ -890,9 +918,12 @@ Java_app_organicmaps_Framework_nativePlacePageActivationListener(JNIEnv *env, jc
   jmethodID const activatedId = jni::GetMethodID(env, g_placePageActivationListener,
                                                  "onPlacePageActivated",
                                                  "(Lapp/organicmaps/widget/placepage/PlacePageData;)V");
-  // void onPlacePageDeactivated(boolean switchFullScreenMode);
+  // void onPlacePageDeactivated();
   jmethodID const deactivateId = jni::GetMethodID(env, g_placePageActivationListener,
-                                                  "onPlacePageDeactivated", "(Z)V");
+                                                  "onPlacePageDeactivated", "()V");
+  // void onPlacePageDeactivated();
+  jmethodID const switchFullscreenId = jni::GetMethodID(env, g_placePageActivationListener,
+                                                        "onSwitchFullScreenMode", "()V");
   auto const fillPlacePage = [activatedId]()
   {
     JNIEnv * env = jni::GetEnv();
@@ -900,21 +931,29 @@ Java_app_organicmaps_Framework_nativePlacePageActivationListener(JNIEnv *env, jc
     jni::TScopedLocalRef placePageDataRef(env, nullptr);
     if (info.IsTrack())
     {
-      auto const elevationInfo = frm()->GetBookmarkManager().MakeElevationInfo(info.GetTrackId());
-      placePageDataRef.reset(usermark_helper::CreateElevationInfo(env, elevationInfo));
+      // todo: (KK) implement elevation info handling for the proper track selection
+      auto const & track = frm()->GetBookmarkManager().GetTrack(info.GetTrackId());
+      auto const & elevationInfo = track->GetElevationInfo();
+      if (elevationInfo.has_value())
+        placePageDataRef.reset(usermark_helper::CreateElevationInfo(env, elevationInfo.value()));
     }
-    else
-    {
+    if (!placePageDataRef)
       placePageDataRef.reset(usermark_helper::CreateMapObject(env, info));
-    }
+
     env->CallVoidMethod(g_placePageActivationListener, activatedId, placePageDataRef.get());
   };
-  auto const closePlacePage = [deactivateId](bool switchFullScreenMode)
+  auto const closePlacePage = [deactivateId]()
   {
     JNIEnv * env = jni::GetEnv();
-    env->CallVoidMethod(g_placePageActivationListener, deactivateId, switchFullScreenMode);
+    env->CallVoidMethod(g_placePageActivationListener, deactivateId);
   };
-  frm()->SetPlacePageListeners(fillPlacePage, closePlacePage, fillPlacePage);
+  auto const switchFullscreen = [switchFullscreenId]()
+  {
+    JNIEnv * env = jni::GetEnv();
+    env->CallVoidMethod(g_placePageActivationListener, switchFullscreenId);
+  };
+
+  frm()->SetPlacePageListeners(fillPlacePage, closePlacePage, fillPlacePage, switchFullscreen);
 }
 
 JNIEXPORT void JNICALL
@@ -926,7 +965,7 @@ Java_app_organicmaps_Framework_nativeRemovePlacePageActivationListener(JNIEnv *e
   if (!env->IsSameObject(g_placePageActivationListener, jListener))
     return;
 
-  frm()->SetPlacePageListeners({} /* onOpen */, {} /* onClose */, {} /* onUpdate */);
+  frm()->SetPlacePageListeners({} /* onOpen */, {} /* onClose */, {} /* onUpdate */, {} /* onSwitchFullScreen */);
   LOG(LINFO, ("Remove global map object listener"));
   env->DeleteGlobalRef(g_placePageActivationListener);
   g_placePageActivationListener = nullptr;
@@ -938,6 +977,15 @@ Java_app_organicmaps_Framework_nativeGetGe0Url(JNIEnv * env, jclass, jdouble lat
   ::Framework * fr = frm();
   double const scale = (zoomLevel > 0 ? zoomLevel : fr->GetDrawScale());
   string const url = fr->CodeGe0url(lat, lon, scale, jni::ToNativeString(env, name));
+  return jni::ToJavaString(env, url);
+}
+
+JNIEXPORT jstring JNICALL
+Java_app_organicmaps_Framework_nativeGetGeoUri(JNIEnv * env, jclass, jdouble lat, jdouble lon, jdouble zoomLevel, jstring name)
+{
+  ::Framework * fr = frm();
+  double const scale = (zoomLevel > 0 ? zoomLevel : fr->GetDrawScale());
+  string const url = ge0::GenerateGeoUri(lat, lon, scale, jni::ToNativeString(env, name));
   return jni::ToJavaString(env, url);
 }
 
@@ -1193,14 +1241,14 @@ Java_app_organicmaps_Framework_nativeDisableFollowing(JNIEnv * env, jclass)
 }
 
 JNIEXPORT jobjectArray JNICALL
-Java_app_organicmaps_Framework_nativeGenerateNotifications(JNIEnv * env, jclass)
+Java_app_organicmaps_Framework_nativeGenerateNotifications(JNIEnv * env, jclass, bool announceStreets)
 {
   ::Framework * fr = frm();
   if (!fr->GetRoutingManager().IsRoutingActive())
     return nullptr;
 
   vector<string> notifications;
-  fr->GetRoutingManager().GenerateNotifications(notifications);
+  fr->GetRoutingManager().GenerateNotifications(notifications, announceStreets);
   if (notifications.empty())
     return nullptr;
 
@@ -1234,15 +1282,15 @@ Java_app_organicmaps_Framework_nativeGetRouteFollowingInfo(JNIEnv * env, jclass)
 
   static jclass const klass = jni::GetGlobalClassRef(env, "app/organicmaps/routing/RoutingInfo");
   // Java signature : RoutingInfo(Distance distToTarget, Distance distToTurn,
-  //                              String currentStreet, String nextStreet,
+  //                              String currentStreet, String nextStreet, String nextNextStreet,
   //                              double completionPercent, int vehicleTurnOrdinal, int
   //                              vehicleNextTurnOrdinal, int pedestrianTurnOrdinal, int exitNum,
   //                              int totalTime, SingleLaneInfo[] lanes)
   static jmethodID const ctorRouteInfoID =
       jni::GetConstructorID(env, klass,
                             "(Lapp/organicmaps/util/Distance;Lapp/organicmaps/util/Distance;"
-                            "Ljava/lang/String;Ljava/lang/String;DIIIII"
-                            "[Lapp/organicmaps/routing/SingleLaneInfo;ZZ)V");
+                            "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;DIIIII"
+                            "[Lapp/organicmaps/routing/SingleLaneInfo;DZZ)V");
 
   vector<routing::FollowingInfo::SingleLaneInfoClient> const & lanes = info.m_lanes;
   jobjectArray jLanes = nullptr;
@@ -1274,10 +1322,11 @@ Java_app_organicmaps_Framework_nativeGetRouteFollowingInfo(JNIEnv * env, jclass)
   auto const shouldPlaySignal = frm()->GetRoutingManager().GetSpeedCamManager().ShouldPlayBeepSignal();
   jobject const result = env->NewObject(
       klass, ctorRouteInfoID, ToJavaDistance(env, info.m_distToTarget),
-      ToJavaDistance(env, info.m_distToTurn), jni::ToJavaString(env, info.m_sourceName),
-      jni::ToJavaString(env, info.m_displayedStreetName), info.m_completionPercent, info.m_turn,
-      info.m_nextTurn, info.m_pedestrianTurn, info.m_exitNum, info.m_time, jLanes,
-      static_cast<jboolean>(isSpeedCamLimitExceeded), static_cast<jboolean>(shouldPlaySignal));
+      ToJavaDistance(env, info.m_distToTurn), jni::ToJavaString(env, info.m_currentStreetName),
+      jni::ToJavaString(env, info.m_nextStreetName), jni::ToJavaString(env, info.m_nextNextStreetName),
+      info.m_completionPercent, info.m_turn, info.m_nextTurn, info.m_pedestrianTurn, info.m_exitNum,
+      info.m_time, jLanes, info.m_speedLimitMps, static_cast<jboolean>(isSpeedCamLimitExceeded),
+      static_cast<jboolean>(shouldPlaySignal));
   ASSERT(result, (jni::DescribeException()));
   return result;
 }
@@ -1443,6 +1492,12 @@ JNIEXPORT void JNICALL
 Java_app_organicmaps_Framework_nativeDeactivatePopup(JNIEnv * env, jclass)
 {
   return g_framework->DeactivatePopup();
+}
+
+JNIEXPORT void JNICALL
+Java_app_organicmaps_Framework_nativeDeactivateMapSelectionCircle(JNIEnv * env, jclass)
+{
+  return g_framework->DeactivateMapSelectionCircle();
 }
 
 JNIEXPORT void JNICALL
@@ -1757,10 +1812,13 @@ JNIEXPORT void JNICALL
 Java_app_organicmaps_Framework_nativeSetChoosePositionMode(JNIEnv *, jclass, jint mode, jboolean isBusiness,
                                                            jboolean applyPosition)
 {
-  auto const pos = applyPosition && frm()->HasPlacePageInfo()
-      ? g_framework->GetPlacePageInfo().GetMercator()
-      : m2::PointD();
-  g_framework->SetChoosePositionMode(static_cast<android::ChoosePositionMode>(mode), isBusiness, applyPosition, pos);
+  // TODO(AB): Move this code into the Framework to share with iOS and other platforms.
+  auto const f = frm();
+  if (applyPosition && f->HasPlacePageInfo())
+    g_framework->SetChoosePositionMode(static_cast<android::ChoosePositionMode>(mode), isBusiness,
+                                       &f->GetCurrentPlacePageInfo().GetMercator());
+  else
+    g_framework->SetChoosePositionMode(static_cast<android::ChoosePositionMode>(mode), isBusiness, nullptr);
 }
 
 JNIEXPORT jint JNICALL
@@ -1926,18 +1984,83 @@ Java_app_organicmaps_Framework_nativeMemoryWarning(JNIEnv *, jclass)
 
 JNIEXPORT jstring JNICALL
 Java_app_organicmaps_Framework_nativeGetKayakHotelLink(JNIEnv * env, jclass, jstring countryIsoCode, jstring uri,
-                                                        jobject firstDay, jobject lastDay, jboolean isReferral)
+                                                        jlong firstDaySec, jlong lastDaySec)
 {
-  static jmethodID dateGetTime = jni::GetMethodID(env, firstDay, "getTime", "()J");
-  jlong firstDaySec = env->CallLongMethod(firstDay, dateGetTime) / 1000L;
-  jlong lastDaySec = env->CallLongMethod(lastDay, dateGetTime) / 1000L;
-
   string const url = osm::GetKayakHotelURLFromURI(jni::ToNativeString(env, countryIsoCode),
                                                   jni::ToNativeString(env, uri),
                                                   static_cast<time_t>(firstDaySec),
-                                                  static_cast<time_t>(lastDaySec),
-                                                  isReferral);
+                                                  static_cast<time_t>(lastDaySec));
   return url.empty() ? nullptr : jni::ToJavaString(env, url);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_app_organicmaps_Framework_nativeShouldShowProducts(JNIEnv * env, jclass)
+{
+  return frm()->ShouldShowProducts();
+}
+
+JNIEXPORT jobject JNICALL
+Java_app_organicmaps_Framework_nativeGetProductsConfiguration(JNIEnv * env, jclass)
+{
+  auto config = frm()->GetProductsConfiguration();
+  if (!config) return nullptr;
+
+  static jclass const productClass = jni::GetGlobalClassRef(
+    env,
+    "app/organicmaps/products/Product"
+  );
+  static jmethodID const productConstructor = jni::GetConstructorID(
+    env,
+    productClass,
+    "(Ljava/lang/String;Ljava/lang/String;)V"
+  );
+
+  jobjectArray products = jni::ToJavaArray(
+    env,
+    productClass,
+    config->GetProducts(),
+    [](JNIEnv * env, products::ProductsConfig::Product const & product)
+    {
+      jni::TScopedLocalRef const title(env, jni::ToJavaString(env, product.GetTitle()));
+      jni::TScopedLocalRef const link(env, jni::ToJavaString(env, product.GetLink()));
+
+      return env->NewObject(
+        productClass,
+        productConstructor,
+        title.get(),
+        link.get()
+      );
+    });
+
+  static jclass const productsConfigClass = jni::GetGlobalClassRef(
+    env,
+    "app/organicmaps/products/ProductsConfig"
+  );
+  static jmethodID const productsConfigConstructor = jni::GetConstructorID(
+    env,
+    productsConfigClass,
+    "(Ljava/lang/String;[Lapp/organicmaps/products/Product;)V"
+  );
+
+  jni::TScopedLocalRef const placePagePrompt(env, jni::ToJavaString(env, config->GetPlacePagePrompt()));
+  return env->NewObject(productsConfigClass, productsConfigConstructor, placePagePrompt.get(), products);
+}
+
+JNIEXPORT void JNICALL
+Java_app_organicmaps_Framework_nativeDidCloseProductsPopup(JNIEnv * env, jclass, jstring reason)
+{
+  frm()->DidCloseProductsPopup(frm()->FromString(jni::ToNativeString(env, reason)));
+}
+
+JNIEXPORT void JNICALL
+Java_app_organicmaps_Framework_nativeDidSelectProduct(JNIEnv * env, jclass, jstring title, jstring link)
+{
+  products::ProductsConfig::Product product(
+    jni::ToNativeString(env, title),
+    jni::ToNativeString(env, link)
+  );
+
+  frm()->DidSelectProduct(product);
 }
 
 }  // extern "C"

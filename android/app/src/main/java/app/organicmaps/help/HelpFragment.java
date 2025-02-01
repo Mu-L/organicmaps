@@ -8,10 +8,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-
+import androidx.core.view.ViewCompat;
 import app.organicmaps.BuildConfig;
 import app.organicmaps.Framework;
 import app.organicmaps.R;
@@ -20,11 +21,14 @@ import app.organicmaps.util.Config;
 import app.organicmaps.util.Constants;
 import app.organicmaps.util.DateUtils;
 import app.organicmaps.util.Graphics;
+import app.organicmaps.util.SharingUtils;
 import app.organicmaps.util.Utils;
+import app.organicmaps.util.WindowInsetUtils.ScrollableContentInsetsListener;
 
 public class HelpFragment extends BaseMwmFragment implements View.OnClickListener
 {
   private String mDonateUrl;
+  private ActivityResultLauncher<SharingUtils.SharingIntent> shareLauncher;
 
   private TextView setupItem(@IdRes int id, boolean tint, @NonNull View frame)
   {
@@ -93,6 +97,10 @@ public class HelpFragment extends BaseMwmFragment implements View.OnClickListene
     termOfUseView.setOnClickListener(v -> Utils.openUrl(requireActivity(), getResources().getString(R.string.translated_om_site_url) + "terms/"));
     privacyPolicyView.setOnClickListener(v -> Utils.openUrl(requireActivity(), getResources().getString(R.string.translated_om_site_url) + "privacy/"));
 
+    shareLauncher = SharingUtils.RegisterLauncher(this);
+
+    ViewCompat.setOnApplyWindowInsetsListener(root, new ScrollableContentInsetsListener(root));
+
     return root;
   }
 
@@ -125,7 +133,7 @@ public class HelpFragment extends BaseMwmFragment implements View.OnClickListene
     else if (id == R.id.faq)
       ((HelpActivity) requireActivity()).stackFragment(FaqFragment.class, getString(R.string.faq), null);
     else if (id == R.id.report)
-      Utils.sendBugReport(requireActivity(), "");
+      Utils.sendBugReport(shareLauncher, requireActivity(), "", "");
     else if (id == R.id.support_us)
       Utils.openUrl(requireActivity(), getResources().getString(R.string.translated_om_site_url) + "support-us/");
     else if (id == R.id.donate)

@@ -8,14 +8,31 @@ namespace feature
 {
 std::string DebugPrint(GeomType type)
 {
+  return ToString(type);
+}
+
+std::string ToString(GeomType type)
+{
   switch (type)
   {
-  case GeomType::Undefined: return "Undefined";
-  case GeomType::Point: return "Point";
-  case GeomType::Line: return "Line";
-  case GeomType::Area: return "Area";
+    case GeomType::Undefined: return "Undefined";
+    case GeomType::Point: return "Point";
+    case GeomType::Line: return "Line";
+    case GeomType::Area: return "Area";
   }
   UNREACHABLE();
+}
+
+GeomType TypeFromString(std::string type)
+{
+  if (type == "Point")
+    return GeomType::Point;
+  else if (type == "Line")
+    return GeomType::Line;
+  else if (type == "Area")
+    return GeomType::Area;
+  else
+    return GeomType::Undefined;
 }
 }  // namespace feature
 
@@ -43,7 +60,7 @@ bool FeatureID::IsEqualCountry(base::StringIL const & lst) const
   auto const & name = m_mwmId.GetInfo()->GetCountryName();
   for (char const * e : lst)
   {
-    if (strings::StartsWith(name, e))
+    if (name.starts_with(e))
       return true;
   }
   return false;

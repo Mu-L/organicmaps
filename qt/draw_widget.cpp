@@ -2,7 +2,9 @@
 
 #include "qt/create_feature_dialog.hpp"
 #include "qt/editor_dialog.hpp"
-#include "qt/place_page_dialog.hpp"
+#include "qt/place_page_dialog_common.hpp"
+#include "qt/place_page_dialog_developer.hpp"
+#include "qt/place_page_dialog_user.hpp"
 #include "qt/qt_common/helpers.hpp"
 #include "qt/routing_settings_dialog.hpp"
 #include "qt/screenshoter.hpp"
@@ -76,6 +78,20 @@ void DrawMwmBorder(df::DrapeApi & drapeApi, std::string const & mwmName,
     kColorCounter = (kColorCounter + 1) % colorList.size();
   }
 }
+
+#if defined(OMIM_OS_LINUX)
+df::TouchEvent::ETouchType qtTouchEventTypeToDfTouchEventType(QEvent::Type qEventType)
+{
+  switch (qEventType)
+  {
+    case QEvent::TouchBegin: return df::TouchEvent::TOUCH_DOWN;
+    case QEvent::TouchEnd: return df::TouchEvent::TOUCH_UP;
+    case QEvent::TouchUpdate: return df::TouchEvent::TOUCH_MOVE;
+    case QEvent::TouchCancel: return df::TouchEvent::TOUCH_CANCEL;
+    default: return df::TouchEvent::TOUCH_NONE;
+  }
+}
+#endif
 }  // namespace
 
 DrawWidget::DrawWidget(Framework & framework, std::unique_ptr<ScreenshotParams> && screenshotParams,
@@ -87,7 +103,7 @@ DrawWidget::DrawWidget(Framework & framework, std::unique_ptr<ScreenshotParams> 
   setFocusPolicy(Qt::StrongFocus);
 
   m_framework.SetPlacePageListeners([this]() { ShowPlacePage(); },
-                                    {} /* onClose */, {} /* onUpdate */);
+                                    {} /* onClose */, {} /* onUpdate */, {} /*onSwitchFullScreen */);
 
   auto & routingManager = m_framework.GetRoutingManager();
 
@@ -145,10 +161,7 @@ void DrawWidget::PrepareShutdown()
     routingManager.SaveRoutePoints();
 
     auto style = m_framework.GetMapStyle();
-    if (style == MapStyle::MapStyleVehicleClear)
-      m_framework.MarkMapStyle(MapStyle::MapStyleClear);
-    else if (style == MapStyle::MapStyleVehicleDark)
-      m_framework.MarkMapStyle(MapStyle::MapStyleDark);
+    m_framework.MarkMapStyle(MapStyleIsDark(style) ? MapStyle::MapStyleDefaultDark : MapStyle::MapStyleDefaultLight);
   }
 }
 
@@ -165,14 +178,12 @@ void DrawWidget::ShowAll()
 void DrawWidget::ChoosePositionModeEnable()
 {
   m_framework.BlockTapEvents(true /* block */);
-  m_framework.EnableChoosePositionMode(true /* enable */, false /* enableBounds */,
-                                       false /* applyPosition */, m2::PointD() /* position */);
+  m_framework.EnableChoosePositionMode(true /* enable */, false /* enableBounds */, nullptr /* optionalPosition */);
 }
 
 void DrawWidget::ChoosePositionModeDisable()
 {
-  m_framework.EnableChoosePositionMode(false /* enable */, false /* enableBounds */,
-                                       false /* applyPosition */, m2::PointD() /* position */);
+  m_framework.EnableChoosePositionMode(false /* enable */, false /* enableBounds */, nullptr /* optionalPosition */);
   m_framework.BlockTapEvents(false /* block */);
 }
 
@@ -195,6 +206,56 @@ void DrawWidget::initializeGL()
     m_screenshoter->Start();
 }
 
+bool DrawWidget::event(QEvent * event)
+{
+#if !defined(OMIM_OS_LINUX)
+    return QOpenGLWidget::event(event);
+#else
+  // TouchScreen
+  if (auto dfTouchEventType = qtTouchEventTypeToDfTouchEventType(event->type());
+      dfTouchEventType != df::TouchEvent::TOUCH_NONE)
+  {
+    event->accept();
+    QTouchEvent const * qtTouchEvent = dynamic_cast<QTouchEvent const *>(event);
+    df::TouchEvent dfTouchEvent;
+    // The SetTouchType hast to be set even if `qtTouchEvent->points()` is empty
+    // which theoretically can happen in case of `QEvent::TouchCancel`
+    dfTouchEvent.SetTouchType(dfTouchEventType);
+
+    int64_t i = 0;
+    for (auto it = qtTouchEvent->points().cbegin();
+         it != qtTouchEvent->points().cend() && i < 2; /* For now drape_frontend can only handle max 2 touches */
+         ++it, ++i)
+    {
+      df::Touch touch;
+      touch.m_id = i;
+      touch.m_location = m2::PointD(L2D(it->position().x()), L2D(it->position().y()));
+      if (i == 0)
+         dfTouchEvent.SetFirstTouch(touch);
+      else
+         dfTouchEvent.SetSecondTouch(touch);
+    }
+    m_framework.TouchEvent(dfTouchEvent);
+    return true;
+  }
+  // TouchPad
+  else if (event->type() == QEvent::NativeGesture)
+  {
+    event->accept();
+    auto qNativeGestureEvent = dynamic_cast<QNativeGestureEvent*>(event);
+    if (qNativeGestureEvent->gestureType() == Qt::ZoomNativeGesture)
+    {
+      QPointF const pos = qNativeGestureEvent->position();
+      double const factor = qNativeGestureEvent->value();
+      m_framework.Scale(exp(factor), m2::PointD(L2D(pos.x()), L2D(pos.y())), false);
+      return true;
+    }
+  }
+  // Everything else
+  return QOpenGLWidget::event(event);
+#endif
+}
+
 void DrawWidget::mousePressEvent(QMouseEvent * e)
 {
   if (m_screenshotMode)
@@ -207,13 +268,13 @@ void DrawWidget::mousePressEvent(QMouseEvent * e)
   if (IsLeftButton(e))
   {
     if (IsShiftModifier(e))
-      SubmitRoutingPoint(pt);
+      SubmitRoutingPoint(pt, false);
     else if (m_ruler.IsActive() && IsAltModifier(e))
       SubmitRulerPoint(pt);
     else if (IsAltModifier(e))
       SubmitFakeLocationPoint(pt);
     else
-      m_framework.TouchEvent(GetTouchEvent(e, df::TouchEvent::TOUCH_DOWN));
+      m_framework.TouchEvent(GetDfTouchEventFromQMouseEvent(e, df::TouchEvent::TOUCH_DOWN));
   }
   else if (IsRightButton(e))
   {
@@ -245,7 +306,7 @@ void DrawWidget::mouseMoveEvent(QMouseEvent * e)
 
   if (IsLeftButton(e) && !IsAltModifier(e))
   {
-    m_framework.TouchEvent(GetTouchEvent(e, df::TouchEvent::TOUCH_MOVE));
+    m_framework.TouchEvent(GetDfTouchEventFromQMouseEvent(e, df::TouchEvent::TOUCH_MOVE));
     e->accept();
   }
 
@@ -318,7 +379,7 @@ void DrawWidget::mouseReleaseEvent(QMouseEvent * e)
   QOpenGLWidget::mouseReleaseEvent(e);
   if (IsLeftButton(e) && !IsAltModifier(e))
   {
-    m_framework.TouchEvent(GetTouchEvent(e, df::TouchEvent::TOUCH_UP));
+    m_framework.TouchEvent(GetDfTouchEventFromQMouseEvent(e, df::TouchEvent::TOUCH_UP));
   }
   else if (m_selectionMode && IsRightButton(e) &&
            m_rubberBand != nullptr && m_rubberBand->isVisible())
@@ -481,7 +542,7 @@ void DrawWidget::SubmitFakeLocationPoint(m2::PointD const & pt)
 {
   m_emulatingLocation = true;
 
-  m2::PointD const point = GetCoordsFromSettingsIfExists(true /* start */, pt);
+  m2::PointD const point = GetCoordsFromSettingsIfExists(true /* start */, pt, false /* pointIsMercator */);
 
   m_framework.OnLocationUpdate(qt::common::MakeGpsInfo(point));
 
@@ -502,7 +563,7 @@ void DrawWidget::SubmitFakeLocationPoint(m2::PointD const & pt)
       LOG(LDEBUG, ("Distance:", loc.m_distToTarget, "Time:", loc.m_time,
                    DebugPrint(loc.m_pedestrianTurn),
                    "in", loc.m_distToTurn.ToString(),
-                   loc.m_targetName.empty() ? "" : "to " + loc.m_targetName ));
+                   loc.m_nextStreetName.empty() ? "" : "to " + loc.m_nextStreetName ));
     }
     else
     {
@@ -513,7 +574,7 @@ void DrawWidget::SubmitFakeLocationPoint(m2::PointD const & pt)
       LOG(LDEBUG, ("Distance:", loc.m_distToTarget, "Time:", loc.m_time, speed,
                    GetTurnString(loc.m_turn), (loc.m_exitNum != 0 ? ":" + std::to_string(loc.m_exitNum) : ""),
                    "in", loc.m_distToTurn.ToString(),
-                   loc.m_targetName.empty() ? "" : "to " + loc.m_targetName ));
+                   loc.m_nextStreetName.empty() ? "" : "to " + loc.m_nextStreetName ));
     }
   }
 }
@@ -524,7 +585,7 @@ void DrawWidget::SubmitRulerPoint(m2::PointD const & pt)
   m_ruler.DrawLine(m_framework.GetDrapeApi());
 }
 
-void DrawWidget::SubmitRoutingPoint(m2::PointD const & pt)
+void DrawWidget::SubmitRoutingPoint(m2::PointD const & pt, bool pointIsMercator)
 {
   auto & routingManager = m_framework.GetRoutingManager();
 
@@ -546,9 +607,9 @@ void DrawWidget::SubmitRoutingPoint(m2::PointD const & pt)
   point.m_pointType = m_routePointAddMode;
   point.m_isMyPosition = false;
   if (!isIntermediate)
-    point.m_position = GetCoordsFromSettingsIfExists(false /* start */, pt);
+    point.m_position = GetCoordsFromSettingsIfExists(false /* start */, pt, pointIsMercator);
  else
-    point.m_position = P2G(pt);
+    point.m_position = pointIsMercator ? pt : P2G(pt);
 
   routingManager.AddRoutePoint(std::move(point));
 
@@ -592,11 +653,7 @@ void DrawWidget::FollowRoute()
   if (routingManager.IsRoutingActive() && !routingManager.IsRoutingFollowing())
   {
     routingManager.FollowRoute();
-    auto style = m_framework.GetMapStyle();
-    if (style == MapStyle::MapStyleClear)
-      SetMapStyle(MapStyle::MapStyleVehicleClear);
-    else if (style == MapStyle::MapStyleDark)
-      SetMapStyle(MapStyle::MapStyleVehicleDark);
+    SetMapStyleToVehicle();
   }
 }
 
@@ -608,13 +665,7 @@ void DrawWidget::ClearRoute()
   routingManager.CloseRouting(true /* remove route points */);
 
   if (wasActive)
-  {
-    auto style = m_framework.GetMapStyle();
-    if (style == MapStyle::MapStyleVehicleClear)
-      SetMapStyle(MapStyle::MapStyleClear);
-    else if (style == MapStyle::MapStyleVehicleDark)
-      SetMapStyle(MapStyle::MapStyleDark);
-  }
+    SetMapStyleToDefault();
 
   m_turnsVisualizer.ClearTurns(m_framework.GetDrapeApi());
 }
@@ -649,8 +700,16 @@ void DrawWidget::ShowPlacePage()
     address = m_framework.GetAddressAtPoint(info.GetMercator());
   }
 
-  PlacePageDialog dlg(this, info, address);
-  if (dlg.exec() == QDialog::Accepted)
+  std::unique_ptr<QDialog> placePageDialog = nullptr;
+  bool developerMode;
+  if (settings::Get(settings::kDeveloperMode, developerMode) && developerMode)
+    placePageDialog = std::make_unique<PlacePageDialogDeveloper>(this, info, address);
+  else
+    placePageDialog = std::make_unique<PlacePageDialogUser>(this, info, address);
+
+  switch (placePageDialog->exec())
+  {
+  case place_page_dialog::EditPlace:
   {
     osm::EditableMapObject emo;
     if (m_framework.GetEditableMapObject(info.GetID(), emo))
@@ -672,7 +731,28 @@ void DrawWidget::ShowPlacePage()
       LOG(LERROR, ("Error while trying to edit feature."));
     }
   }
-  m_framework.DeactivateMapSelection(false);
+  break;
+  case place_page_dialog::RouteFrom:
+  {
+    SetRoutePointAddMode(RouteMarkType::Start);
+    SubmitRoutingPoint(info.GetMercator(), true);
+  }
+  break;
+  case place_page_dialog::AddStop:
+  {
+    SetRoutePointAddMode(RouteMarkType::Intermediate);
+    SubmitRoutingPoint(info.GetMercator(), true);
+  }
+  break;
+  case place_page_dialog::RouteTo:
+  {
+    SetRoutePointAddMode(RouteMarkType::Finish);
+    SubmitRoutingPoint(info.GetMercator(), true);
+  }
+  break;
+  default: break;
+  }
+  m_framework.DeactivateMapSelection();
 }
 
 void DrawWidget::SetRuler(bool enabled)
@@ -685,7 +765,25 @@ void DrawWidget::SetRuler(bool enabled)
 // static
 void DrawWidget::RefreshDrawingRules()
 {
-  SetMapStyle(MapStyleClear);
+  SetMapStyle(MapStyleDefaultLight);
+}
+
+void DrawWidget::SetMapStyleToDefault()
+{
+  auto const style = m_framework.GetMapStyle();
+  SetMapStyle(MapStyleIsDark(style) ? MapStyle::MapStyleDefaultDark : MapStyle::MapStyleDefaultLight);
+}
+
+void DrawWidget::SetMapStyleToVehicle()
+{
+  auto const style = m_framework.GetMapStyle();
+  SetMapStyle(MapStyleIsDark(style) ? MapStyle::MapStyleVehicleDark : MapStyle::MapStyleVehicleLight);
+}
+
+void DrawWidget::SetMapStyleToOutdoors()
+{
+  auto const style = m_framework.GetMapStyle();
+  SetMapStyle(MapStyleIsDark(style) ? MapStyle::MapStyleOutdoorsDark : MapStyle::MapStyleOutdoorsLight);
 }
 
 m2::PointD DrawWidget::P2G(m2::PointD const & pt) const
@@ -693,11 +791,11 @@ m2::PointD DrawWidget::P2G(m2::PointD const & pt) const
   return m_framework.P3dtoG(pt);
 }
 
-m2::PointD DrawWidget::GetCoordsFromSettingsIfExists(bool start, m2::PointD const & pt) const
+m2::PointD DrawWidget::GetCoordsFromSettingsIfExists(bool start, m2::PointD const & pt,  bool pointIsMercator) const
 {
   if (auto optional = RoutingSettings::GetCoords(start))
     return mercator::FromLatLon(*optional);
 
-  return P2G(pt);
+  return pointIsMercator ? pt : P2G(pt);
 }
 }  // namespace qt

@@ -1,28 +1,37 @@
 package app.organicmaps.editor;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import app.organicmaps.R;
 import app.organicmaps.base.BaseMwmToolbarFragment;
 import app.organicmaps.util.UiUtils;
 import app.organicmaps.util.Utils;
+import app.organicmaps.util.WindowInsetUtils;
 import app.organicmaps.util.concurrency.ThreadPool;
 import app.organicmaps.util.concurrency.UiThread;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.text.NumberFormat;
+
 public class ProfileFragment extends BaseMwmToolbarFragment
 {
+  private View mUserInfoBlock;
   private TextView mEditsSent;
-  private ProgressBar mEditsSentProgress;
+  private TextView mProfileName;
+  private ImageView mProfileImage;
+  private ProgressBar mProfileInfoLoading;
 
   @Nullable
   @Override
@@ -44,13 +53,23 @@ public class ProfileFragment extends BaseMwmToolbarFragment
   {
     View logoutButton = getToolbarController().getToolbar().findViewById(R.id.logout);
     logoutButton.setOnClickListener((v) -> logout());
-    View editsBlock = view.findViewById(R.id.block_edits);
-    UiUtils.show(editsBlock);
-    View sentBlock = editsBlock.findViewById(R.id.sent_edits);
-    mEditsSent = sentBlock.findViewById(R.id.edits_count);
-    mEditsSentProgress = sentBlock.findViewById(R.id.edits_count_progress);
+    mUserInfoBlock = view.findViewById(R.id.block_user_info);
+    mProfileInfoLoading = view.findViewById(R.id.user_profile_loading);
+    mEditsSent = mUserInfoBlock.findViewById(R.id.user_sent_edits);
+    mProfileName = mUserInfoBlock.findViewById(R.id.user_profile_name);
+    mProfileImage = mUserInfoBlock.findViewById(R.id.user_profile_image);
     view.findViewById(R.id.about_osm).setOnClickListener((v) -> Utils.openUrl(requireActivity(), getString(R.string.osm_wiki_about_url)));
     view.findViewById(R.id.osm_history).setOnClickListener((v) -> Utils.openUrl(requireActivity(), OsmOAuth.getHistoryUrl(requireContext())));
+    view.findViewById(R.id.osm_notes).setOnClickListener((v) -> Utils.openUrl(requireActivity(), OsmOAuth.getNotesUrl(requireContext())));
+
+    View buttonsContainer = view.findViewById(R.id.buttons_container);
+    ViewCompat.setOnApplyWindowInsetsListener(
+        buttonsContainer,
+        new WindowInsetUtils.PaddingInsetsListener
+            .Builder()
+            .setInsetsTypeMask(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout())
+            .setExcludeTop()
+            .build());
   }
 
   private void refreshViews()
@@ -61,21 +80,32 @@ public class ProfileFragment extends BaseMwmToolbarFragment
       ThreadPool.getWorker().execute(() -> {
         if (mEditsSent.getText().equals(""))
         {
-          UiUtils.hide(mEditsSent);
-          UiUtils.show(mEditsSentProgress);
+          UiUtils.show(mProfileInfoLoading);
+          UiUtils.hide(mUserInfoBlock);
         }
-        final int count = OsmOAuth.getOsmChangesetsCount(requireContext(), getParentFragmentManager());
+        final int profileEditCount = OsmOAuth.getOsmChangesetsCount(requireContext(), getParentFragmentManager());
+        final String profileUsername = OsmOAuth.getUsername(requireContext());
+        final Bitmap profilePicture = OsmOAuth.getProfilePicture(requireContext());
+
         UiThread.run(() -> {
-          mEditsSent.setText(String.valueOf(count));
-          UiUtils.show(mEditsSent);
-          UiUtils.hide(mEditsSentProgress);
+          mEditsSent.setText(NumberFormat.getInstance().format(profileEditCount));
+          mProfileName.setText(profileUsername);
+
+          // Use generic image if user has no profile picture or it failed to load.
+          if (profilePicture != null)
+            mProfileImage.setImageBitmap(profilePicture);
+          else
+            mProfileImage.setImageResource(R.drawable.profile_generic);
+
+          UiUtils.show(mUserInfoBlock);
+          UiUtils.hide(mProfileInfoLoading);
         });
       });
     }
     else
     {
       Intent intent = new Intent(requireContext(), OsmLoginActivity.class);
-      intent.putExtra("redirectToProfile", true);
+      intent.putExtra(ProfileActivity.EXTRA_REDIRECT_TO_PROFILE, true);
       startActivity(intent);
       requireActivity().finish();
     }
@@ -84,7 +114,7 @@ public class ProfileFragment extends BaseMwmToolbarFragment
   private void logout()
   {
     new MaterialAlertDialogBuilder(requireContext(), R.style.MwmTheme_AlertDialog)
-        .setMessage(R.string.are_you_sure)
+        .setMessage(R.string.osm_log_out_confirmation)
         .setPositiveButton(R.string.yes, (dialog, which) ->
         {
           OsmOAuth.clearAuthorization(requireContext());

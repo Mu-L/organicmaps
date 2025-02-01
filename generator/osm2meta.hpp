@@ -37,6 +37,9 @@ struct MetadataTagProcessorImpl
   static std::string ValidateAndFormat_brand(std::string const & v);
   std::string ValidateAndFormat_duration(std::string const & v) const;
   static std::string ValidateAndFormat_capacity(std::string const & v);
+  static std::string ValidateAndFormat_drive_through(std::string v);
+  static std::string ValidateAndFormat_self_service(std::string v);
+  static std::string ValidateAndFormat_outdoor_seating(std::string v);
 
 protected:
   FeatureBuilderParams & m_params;

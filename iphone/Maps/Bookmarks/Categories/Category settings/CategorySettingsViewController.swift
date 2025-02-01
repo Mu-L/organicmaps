@@ -87,7 +87,7 @@ final class CategorySettingsViewController: MWMTableViewController {
       let cell = tableView.dequeueReusableCell(cell: MWMButtonCell.self, indexPath: indexPath)
       cell.configure(with: self,
                      title: L("delete_list"),
-                     enabled: BookmarksManager.shared().userCategories().count > 1)
+                     enabled: BookmarksManager.shared().userCategoriesCount() > 1)
       return cell
     default:
       fatalError()
@@ -101,7 +101,7 @@ final class CategorySettingsViewController: MWMTableViewController {
       changesMade = true
     }
 
-    if let newAnnotation = newAnnotation, !newAnnotation.isEmpty {
+    if let newAnnotation = newAnnotation {
       BookmarksManager.shared().setCategory(bookmarkGroup.categoryId, description: newAnnotation)
       changesMade = true
     }

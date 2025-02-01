@@ -1,10 +1,12 @@
 package app.organicmaps.bookmarks;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -12,6 +14,7 @@ import android.provider.DocumentsContract;
 import android.view.View;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.CallSuper;
 import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
@@ -24,7 +27,9 @@ import app.organicmaps.base.BaseMwmRecyclerFragment;
 import app.organicmaps.bookmarks.data.BookmarkCategory;
 import app.organicmaps.bookmarks.data.BookmarkManager;
 import app.organicmaps.bookmarks.data.BookmarkSharingResult;
+import app.organicmaps.bookmarks.data.KmlFileType;
 import app.organicmaps.dialog.EditTextDialogFragment;
+import app.organicmaps.util.SharingUtils;
 import app.organicmaps.util.Utils;
 import app.organicmaps.widget.PlaceholderView;
 import app.organicmaps.widget.recycler.DividerItemDecorationWithPadding;
@@ -58,6 +63,8 @@ public class BookmarkCategoriesFragment extends BaseMwmRecyclerFragment<Bookmark
   private static final int MAX_CATEGORY_NAME_LENGTH = 60;
 
   public static final String BOOKMARKS_CATEGORIES_MENU_ID = "BOOKMARKS_CATEGORIES_BOTTOM_SHEET";
+
+  private ActivityResultLauncher<SharingUtils.SharingIntent> shareLauncher;
 
   @Nullable
   private BookmarkCategory mSelectedCategory;
@@ -103,6 +110,8 @@ public class BookmarkCategoriesFragment extends BaseMwmRecyclerFragment<Bookmark
     rw.addItemDecoration(decor);
     mCategoriesAdapterObserver = this::onCategoriesChanged;
     BookmarkManager.INSTANCE.addCategoriesUpdatesListener(mCategoriesAdapterObserver);
+
+    shareLauncher = SharingUtils.RegisterLauncher(this);
   }
 
   protected void onPrepareControllers(@NonNull View view)
@@ -113,7 +122,7 @@ public class BookmarkCategoriesFragment extends BaseMwmRecyclerFragment<Bookmark
   @Override
   public void onPreparedFileForSharing(@NonNull BookmarkSharingResult result)
   {
-    BookmarksSharingHelper.INSTANCE.onPreparedFileForSharing(requireActivity(), result);
+    BookmarksSharingHelper.INSTANCE.onPreparedFileForSharing(requireActivity(), shareLauncher, result);
   }
 
   @Override
@@ -176,8 +185,12 @@ public class BookmarkCategoriesFragment extends BaseMwmRecyclerFragment<Bookmark
           () -> onShowActionSelected(mSelectedCategory)));
       items.add(new MenuBottomSheetItem(
           R.string.export_file,
-          R.drawable.ic_share,
-          () -> onShareActionSelected(mSelectedCategory)));
+          R.drawable.ic_file_kmz,
+          () -> onShareActionSelected(mSelectedCategory, KmlFileType.Text)));
+      items.add(new MenuBottomSheetItem(
+          R.string.export_file_gpx,
+          R.drawable.ic_file_gpx,
+          () -> onShareActionSelected(mSelectedCategory, KmlFileType.Gpx)));
       // Disallow deleting the last category
       if (getAdapter().getBookmarkCategories().size() > 1)
         items.add(new MenuBottomSheetItem(
@@ -201,17 +214,14 @@ public class BookmarkCategoriesFragment extends BaseMwmRecyclerFragment<Bookmark
   }
 
   @Override
-  public void onBookmarksFileLoaded(boolean success)
+  public void onBookmarksFileImportFailed()
   {
     // TODO: Is there a way to display several failure notifications?
     // TODO: It would be helpful to see the file name that failed to import.
-    if (!success)
-    {
-      final View view = getView();
-      // TODO: how to get import button view to show snackbar above it?
-      if (view != null)
-        Utils.showSnackbar(requireActivity(), view, R.string.load_kmz_failed);
-    }
+    final View view = getView();
+    // TODO: how to get import button view to show snackbar above it?
+    if (view != null)
+      Utils.showSnackbar(requireActivity(), view, R.string.load_kmz_failed);
   }
 
   @Override
@@ -246,7 +256,19 @@ public class BookmarkCategoriesFragment extends BaseMwmRecyclerFragment<Bookmark
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
       intent.putExtra(DocumentsContract.EXTRA_EXCLUDE_SELF, true);
-    startActivityForResult(intent, REQ_CODE_IMPORT_DIRECTORY);
+
+    PackageManager packageManager = requireActivity().getPackageManager();
+    if (intent.resolveActivity(packageManager) != null)
+      startActivityForResult(intent, REQ_CODE_IMPORT_DIRECTORY);
+    else
+      showNoFileManagerError();
+  }
+
+  private void showNoFileManagerError() {
+    new AlertDialog.Builder(requireActivity())
+        .setMessage(R.string.error_no_file_manager_app)
+        .setPositiveButton(android.R.string.ok, (dialog, which) -> dialog.dismiss())
+        .show();
   }
 
   @Override
@@ -268,9 +290,9 @@ public class BookmarkCategoriesFragment extends BaseMwmRecyclerFragment<Bookmark
     getAdapter().notifyDataSetChanged();
   }
 
-  protected void onShareActionSelected(@NonNull BookmarkCategory category)
+  protected void onShareActionSelected(@NonNull BookmarkCategory category, KmlFileType kmlFileType)
   {
-    BookmarksSharingHelper.INSTANCE.prepareBookmarkCategoryForSharing(requireActivity(), category.getId());
+    BookmarksSharingHelper.INSTANCE.prepareBookmarkCategoryForSharing(requireActivity(), category.getId(), kmlFileType);
   }
 
   private void onDeleteActionSelected(@NonNull BookmarkCategory category)

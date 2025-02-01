@@ -1,8 +1,8 @@
-• Dades de l’OpenStreetMap al 28 de febrer
-• Exportació de totes les adreces d’interès en un únic fitxer KMZ
-• S’han afegit reciclatge i elevació a les descripcions dels resultats de la cerca
-• S’han corregit diverses fallades
-• Ja no es mostra «Opcions d’encaminament activades» quan s’usa el regle
-• S’assenyalen els llocs accessibles amb cadira de rodes
+• New OpenStreetMap data as of January 21
+• Dispay a speed limit sign in the navigation mode
+• Added Serbian (Cyrillic) and Latvian languages
+• Android Auto: sort bookmarks, improved location permission request experience
+• Added tower POIs
+• Added a setting for Kayak.com Hotel Links and a first-use opt-out option
 
-… llegiu-ne més a: omaps.org/news
+…more details at omaps.org/news

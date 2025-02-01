@@ -8,29 +8,35 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.ViewCompat;
 import app.organicmaps.R;
 import app.organicmaps.WebContainerDelegate;
 import app.organicmaps.base.BaseMwmFragment;
 import app.organicmaps.util.Constants;
+import app.organicmaps.util.SharingUtils;
 import app.organicmaps.util.Utils;
+import app.organicmaps.util.WindowInsetUtils;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 public class FaqFragment extends BaseMwmFragment
 {
+  private ActivityResultLauncher<SharingUtils.SharingIntent> shareLauncher;
+
   @NonNull
   private final DialogInterface.OnClickListener mDialogClickListener = new DialogInterface.OnClickListener()
   {
     private void sendGeneralFeedback()
     {
-      Utils.sendFeedback(requireActivity());
+      Utils.sendFeedback(shareLauncher, requireActivity());
     }
 
     private void reportBug()
     {
-      Utils.sendBugReport(requireActivity(), "");
+      Utils.sendBugReport(shareLauncher, requireActivity(), "", "");
     }
 
     @Override
@@ -48,6 +54,8 @@ public class FaqFragment extends BaseMwmFragment
   public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState)
   {
     View root = inflater.inflate(R.layout.fragment_prefs_faq, container, false);
+
+    ViewCompat.setOnApplyWindowInsetsListener(root, WindowInsetUtils.PaddingInsetsListener.excludeTop());
 
     new WebContainerDelegate(root, Constants.Url.FAQ)
     {
@@ -75,6 +83,8 @@ public class FaqFragment extends BaseMwmFragment
           feedbackFab.show();
       });
     }
+
+    shareLauncher = SharingUtils.RegisterLauncher(this);
 
     return root;
   }

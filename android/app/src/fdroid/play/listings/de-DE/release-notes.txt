@@ -1,8 +1,8 @@
-• OpenStreetMap data as of February 28
-• Export all bookmarks as a single KMZ file
-• Fixed several crashes
-• "Routing options enabled" is no longer displayed when using ruler
-• Included wheelchair accessibility information on place pages
-• Added recycling and elevation information to search result descriptions
+• Neue OpenStreetMap-Daten vom 21. Januar
+• Anzeige eines Geschwindigkeitsbegrenzungsschildes im Navigationsmodus
+• Serbische (Kyrillisch) und Lettische Sprachen hinzugefügt
+• Android Auto: Lesezeichen sortieren, verbessertes Erlebnis bei der Anforderung von Standortberechtigungen
+• Turm-POIs hinzugefügt
+• Eine Einstellung für Kayak.com-Hotellinks und eine Opt-out-Option bei der ersten Nutzung hinzugefügt.
 
-…read more details at omaps.org/news
+…weitere Details unter omaps.org/news

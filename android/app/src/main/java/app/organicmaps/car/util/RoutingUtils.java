@@ -7,7 +7,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.car.app.CarContext;
 import androidx.car.app.model.CarIcon;
-import androidx.car.app.model.DateTimeWithZone;
 import androidx.car.app.navigation.model.Destination;
 import androidx.car.app.navigation.model.Lane;
 import androidx.car.app.navigation.model.Step;
@@ -19,8 +18,9 @@ import app.organicmaps.bookmarks.data.MapObject;
 import app.organicmaps.routing.RoutingInfo;
 import app.organicmaps.routing.SingleLaneInfo;
 import app.organicmaps.util.Graphics;
+import app.organicmaps.widget.LanesDrawable;
 
-import java.util.Calendar;
+import java.time.ZonedDateTime;
 import java.util.Objects;
 
 public final class RoutingUtils
@@ -63,8 +63,8 @@ public final class RoutingUtils
   private static Step createCurrentStep(@NonNull final CarContext context, @NonNull RoutingInfo info)
   {
     final Step.Builder builder = new Step.Builder();
-    builder.setCue(info.currentStreet);
-    builder.setRoad(info.currentStreet);
+    builder.setCue(info.nextStreet);
+    builder.setRoad(info.nextStreet);
     builder.setManeuver(RoutingHelpers.createManeuver(context, info.carDirection, info.exitNum));
     if (info.lanes != null)
     {
@@ -75,7 +75,7 @@ public final class RoutingUtils
           laneBuilder.addDirection(RoutingHelpers.createLaneDirection(laneWay, laneInfo.mIsActive));
         builder.addLane(laneBuilder.build());
       }
-      final LanesDrawable lanesDrawable = new LanesDrawable(context, info.lanes, ThemeUtils.isNightMode(context));
+      final LanesDrawable lanesDrawable = new LanesDrawable(context, info.lanes);
       final Bitmap lanesBitmap = Graphics.drawableToBitmap(lanesDrawable);
       builder.setLanesImage(new CarIcon.Builder(IconCompat.createWithBitmap(lanesBitmap)).build());
     }
@@ -87,26 +87,19 @@ public final class RoutingUtils
   private static Step createNextStep(@NonNull final CarContext context, @NonNull RoutingInfo info)
   {
     final Step.Builder builder = new Step.Builder();
-    builder.setCue(info.nextStreet);
+    builder.setCue(info.nextNextStreet);
     builder.setManeuver(RoutingHelpers.createManeuver(context, info.nextCarDirection, 0));
 
     return builder.build();
   }
 
+  @SuppressWarnings("NewApi") // ZonedDateTime is backported for Android versions below 8.0.
   @NonNull
   private static TravelEstimate createTravelEstimate(@NonNull app.organicmaps.util.Distance distance, int time)
   {
-    final TravelEstimate.Builder builder = new TravelEstimate.Builder(RoutingHelpers.createDistance(distance), createTimeEstimate(time));
-    builder.setRemainingTimeSeconds(time);
-    builder.setRemainingDistanceColor(Colors.DISTANCE);
-    return builder.build();
-  }
-
-  @NonNull
-  private static DateTimeWithZone createTimeEstimate(int seconds)
-  {
-    final Calendar currentTime = Calendar.getInstance();
-    currentTime.add(Calendar.SECOND, seconds);
-    return DateTimeWithZone.create(currentTime.getTimeInMillis(), currentTime.getTimeZone());
+    return new TravelEstimate.Builder(RoutingHelpers.createDistance(distance), ZonedDateTime.now().plusSeconds(time))
+        .setRemainingTimeSeconds(time)
+        .setRemainingDistanceColor(Colors.DISTANCE)
+        .build();
   }
 }

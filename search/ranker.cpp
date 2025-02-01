@@ -16,6 +16,8 @@
 #include "indexer/road_shields_parser.hpp"
 #include "indexer/search_string_utils.hpp"
 
+#include "platform/localization.hpp"
+
 #include "coding/string_utf8_multilang.hpp"
 
 #include "base/logging.hpp"
@@ -471,9 +473,25 @@ private:
     center = feature::GetCenter(*ft);
     m_ranker.GetBestMatchName(*ft, name);
 
+    // Use brand instead of empty result name.
+    if (!m_isViewportMode && name.empty())
+    {
+      std::string_view brand = (*ft).GetMetadata(feature::Metadata::FMD_BRAND);
+      if (!brand.empty())
+        name = platform::GetLocalizedBrandName(std::string{ brand });
+    }
+
     // Insert exact address (street and house number) instead of empty result name.
     if (!m_isViewportMode && name.empty())
     {
+      feature::TypesHolder featureTypes(*ft);
+      featureTypes.SortBySpec();
+      auto const bestType = featureTypes.GetBestType();
+      auto const addressChecker = ftypes::IsAddressChecker::Instance();
+    
+      if (!addressChecker.IsMatched(bestType))
+        return ft;
+
       ReverseGeocoder::Address addr;
       if (GetExactAddress(*ft, center, addr))
       {
@@ -571,8 +589,9 @@ private:
 
       updateDependScore(Model::TYPE_STREET, preInfo.m_geoParts.m_street);
       updateDependScore(Model::TYPE_SUBURB, preInfo.m_geoParts.m_suburb);
+      updateDependScore(Model::TYPE_COMPLEX_POI, preInfo.m_geoParts.m_complexPoi);
 
-      if (!Model::IsLocalityType(info.m_type) && preInfo.m_cityId.IsValid())
+      if (preInfo.m_cityId.IsValid())
       {
         if (auto city = LoadFeature(preInfo.m_cityId))
         {
@@ -585,7 +604,20 @@ private:
             ASSERT(preInfo.m_tokenRanges[Model::TYPE_VILLAGE].Empty(), ());
           }
 
-          auto const cityNameScore = updateScoreForFeature(*city, type);
+          NameScore cityNameScore = NameScore::ZERO;
+          if (Model::IsLocalityType(info.m_type))
+          {
+            // Hack to promote results like "Nice France".
+            // Otherwise, POIs with "France" token in name around the "Nice" city will be always on top.
+            if (preInfo.m_allTokensUsed && preInfo.m_cityId == res.GetId() &&
+                !(preInfo.m_tokenRanges[Model::TYPE_STATE].Empty() &&
+                  preInfo.m_tokenRanges[Model::TYPE_COUNTRY].Empty()))
+            {
+              cityNameScore = GetNameScores(ft, m_params, preInfo.m_tokenRanges[type], type).m_nameScore;
+            }
+          }
+          else
+            cityNameScore = updateScoreForFeature(*city, type);
 
           // Update distance with matched city pivot if we have a _good_ city name score.
           // A bit controversial distance score reset, but lets try.
@@ -601,6 +633,9 @@ private:
       info.m_errorsMade = errorsMade;
       info.m_isAltOrOldName = isAltOrOldName;
       info.m_matchedFraction = matchedLength / static_cast<float>(totalLength);
+
+      /// @todo Also should add POI + nearby Street/Suburb/City.
+      info.m_nearbyMatch = preInfo.m_geoParts.IsPoiAndComplexPoi();
     }
 
     CategoriesInfo const categoriesInfo(featureTypes,
@@ -744,7 +779,7 @@ Result Ranker::MakeResult(RankerResult const & rankerResult, bool needAddress, b
   }
 
   if (needHighlighting)
-    HighlightResult(m_params.m_tokens, m_params.m_prefix, res);
+    HighlightResult(m_params.m_query.m_tokens, m_params.m_query.m_prefix, res);
 
   res.SetRankingInfo(rankerResult.m_dbgInfo);
 
@@ -758,13 +793,13 @@ Result Ranker::MakeResult(RankerResult const & rankerResult, bool needAddress, b
 void Ranker::SuggestStrings()
 {
   // Prefix is only empty when tokens exceeds the max allowed. No point in giving suggestions then.
-  if (m_params.m_prefix.empty() || !m_params.m_suggestsEnabled)
+  if (m_params.m_query.m_prefix.empty() || !m_params.m_suggestsEnabled)
     return;
 
-  string prologue = DropLastToken(m_params.m_query);
+  string const prologue = DropLastToken(m_params.m_query.m_query);
 
   for (auto const locale : m_params.m_categoryLocales)
-    MatchForSuggestions(m_params.m_prefix, locale, prologue);
+    MatchForSuggestions(m_params.m_query.m_prefix, locale, prologue);
 }
 
 void Ranker::UpdateResults(bool lastUpdate)
@@ -964,7 +999,7 @@ void Ranker::MatchForSuggestions(strings::UniString const & token, int8_t locale
     {
       string const utf8Str = strings::ToUtf8(s);
       Result r(utf8Str, prologue + utf8Str + " ");
-      HighlightResult(m_params.m_tokens, m_params.m_prefix, r);
+      HighlightResult(m_params.m_query.m_tokens, m_params.m_query.m_prefix, r);
       m_emitter.AddResult(std::move(r));
     }
   }
@@ -972,7 +1007,7 @@ void Ranker::MatchForSuggestions(strings::UniString const & token, int8_t locale
 
 void Ranker::ProcessSuggestions(vector<RankerResult> const & vec) const
 {
-  if (m_params.m_prefix.empty() || !m_params.m_suggestsEnabled)
+  if (m_params.m_query.m_prefix.empty() || !m_params.m_suggestsEnabled)
     return;
 
   size_t added = 0;
@@ -984,7 +1019,7 @@ void Ranker::ProcessSuggestions(vector<RankerResult> const & vec) const
     ftypes::LocalityType const type = GetLocalityIndex(r.GetTypes());
     if (type == ftypes::LocalityType::Country || type == ftypes::LocalityType::City || r.IsStreet())
     {
-      string suggestion = GetSuggestion(r, m_params.m_query, m_params.m_tokens, m_params.m_prefix);
+      string suggestion = GetSuggestion(r.GetName(), m_params.m_query);
       if (!suggestion.empty())
       {
         // todo(@m) RankingInfo is lost here. Should it be?

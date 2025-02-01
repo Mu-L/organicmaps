@@ -5,7 +5,6 @@ import android.app.Dialog;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.GridView;
 
 import androidx.annotation.NonNull;
@@ -25,7 +24,7 @@ public class BookmarkColorDialogFragment extends BaseMwmDialogFragment
 
   private int mIconColor;
 
-  interface OnBookmarkColorChangeListener
+  public interface OnBookmarkColorChangeListener
   {
     void onBookmarkColorSet(int colorPos);
   }
@@ -43,7 +42,7 @@ public class BookmarkColorDialogFragment extends BaseMwmDialogFragment
 
     return new MaterialAlertDialogBuilder(requireActivity(), R.style.MwmTheme_AlertDialog)
         .setView(buildView())
-        .setTitle(R.string.bookmark_color)
+        .setTitle(R.string.choose_color)
         .setNegativeButton(R.string.cancel, null)
         .create();
   }

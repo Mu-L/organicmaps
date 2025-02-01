@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -33,11 +34,9 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.google.android.material.textfield.TextInputLayout;
-
 import app.organicmaps.MwmApplication;
 import app.organicmaps.R;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.Objects;
 
@@ -229,22 +228,29 @@ public final class UiUtils
   public static void setFullscreen(@NonNull Activity activity, boolean fullscreen)
   {
     final Window window = activity.getWindow();
-    final View decorView = window.getDecorView();
-    WindowInsetsControllerCompat wic = Objects.requireNonNull(WindowCompat.getInsetsController(window, decorView));
-    if (fullscreen)
+
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R)
     {
-      wic.hide(WindowInsetsCompat.Type.systemBars());
-      wic.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+      // On older versions of Android there is layout issue on exit from fullscreen mode.
+      // For such versions we use old-style fullscreen mode.
+      // See https://github.com/organicmaps/organicmaps/pull/8551 for details
+      if (fullscreen)
+        window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+      else
+        window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
     }
     else
-      wic.show(WindowInsetsCompat.Type.systemBars());
-  }
-
-  public static void setupTransparentStatusBar(@NonNull Activity activity)
-  {
-    final Window window = activity.getWindow();
-    window.getDecorView().setFitsSystemWindows(false);
-    window.setStatusBarColor(Color.TRANSPARENT);
+    {
+      final View decorView = window.getDecorView();
+      WindowInsetsControllerCompat wic = Objects.requireNonNull(WindowCompat.getInsetsController(window, decorView));
+      if (fullscreen)
+      {
+        wic.hide(WindowInsetsCompat.Type.systemBars());
+        wic.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+      }
+      else
+        wic.show(WindowInsetsCompat.Type.systemBars());
+    }
   }
 
   public static void setLightStatusBar(@NonNull Activity activity, boolean isLight)
@@ -267,29 +273,16 @@ public final class UiUtils
     }
   }
 
-  public static void setViewInsetsPadding(View view, WindowInsetsCompat windowInsets)
-  {
-    final Insets systemInsets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-    view.setPadding(systemInsets.left, systemInsets.top,
-                    systemInsets.right, systemInsets.bottom);
-  }
-
-  public static void setViewInsetsPaddingNoTop(View view, WindowInsetsCompat windowInsets)
-  {
-    final Insets systemInsets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-    view.setPadding(systemInsets.left, view.getPaddingTop(),
-                    systemInsets.right, systemInsets.bottom);
-  }
   public static void setViewInsetsPaddingBottom(View view, WindowInsetsCompat windowInsets)
   {
-    final Insets systemInsets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+    final Insets systemInsets = windowInsets.getInsets(WindowInsetUtils.TYPE_SAFE_DRAWING);
     view.setPaddingRelative(view.getPaddingStart(), view.getPaddingTop(),
                     view.getPaddingEnd(), systemInsets.bottom);
   }
 
   public static void setViewInsetsPaddingNoBottom(View view, WindowInsetsCompat windowInsets)
   {
-    final Insets systemInsets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+    final Insets systemInsets = windowInsets.getInsets(WindowInsetUtils.TYPE_SAFE_DRAWING);
     view.setPadding(systemInsets.left, systemInsets.top,
                     systemInsets.right, view.getPaddingBottom());
   }

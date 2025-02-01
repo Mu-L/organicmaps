@@ -92,6 +92,15 @@
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>mailto</string>
+		<string>comgooglemaps</string>
+		<string>osmandmaps</string>
+		<string>yandexmaps</string>
+		<string>dgis</string>
+		<string>citymapper</string>
+		<string>moovit</string>
+		<string>uber</string>
+		<string>waze</string>
+		<string>gomaposm</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
@@ -252,5 +261,28 @@
 			</dict>
 		</dict>
 	</array>
+	<key>NSUbiquitousContainers</key>
+	<dict>
+		<key>iCloud.app.organicmaps</key>
+		<dict>
+			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
+			<true/>
+			<key>NSUbiquitousContainerSupportedFolderLevels</key>
+			<string>ANY</string>
+			<key>NSUbiquitousContainerName</key>
+			<string>OrganicMaps</string>
+		</dict>
+		<key>iCloud.app.organicmaps.debug</key>
+		<dict>
+			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
+			<true/>
+			<key>NSUbiquitousContainerSupportedFolderLevels</key>
+			<string>ANY</string>
+			<key>NSUbiquitousContainerName</key>
+			<string>OrganicMapsDEBUG</string>
+		</dict>
+	</dict>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 </dict>
 </plist>

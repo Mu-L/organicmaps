@@ -20,6 +20,7 @@ import app.organicmaps.adapter.OnItemClickListener;
 import app.organicmaps.bookmarks.data.BookmarkCategory;
 import app.organicmaps.bookmarks.data.BookmarkInfo;
 import app.organicmaps.bookmarks.data.BookmarkManager;
+import app.organicmaps.bookmarks.data.IconClickListener;
 import app.organicmaps.bookmarks.data.Track;
 import app.organicmaps.location.LocationHelper;
 import app.organicmaps.util.Utils;
@@ -189,19 +190,17 @@ public class Holders
       final int bookmarksCount = mEntity.getBookmarksCount();
       final int tracksCount = mEntity.getTracksCount();
 
-      if (mEntity.size() == 0)
-        return getQuantified(resources, R.plurals.objects, 0);
-
-      if (bookmarksCount > 0 && tracksCount > 0)
+      if ((bookmarksCount == 0 && tracksCount == 0) || (bookmarksCount > 0 && tracksCount > 0))
       {
-        final String bookmarks = getQuantified(resources, R.plurals.places, bookmarksCount);
+        final String bookmarks = getQuantified(resources, R.plurals.bookmarks_places, bookmarksCount);
         final String tracks = getQuantified(resources, R.plurals.tracks, tracksCount);
         final String template = resources.getString(R.string.comma_separated_pair);
+
         return String.format(template, bookmarks, tracks);
       }
 
       if (bookmarksCount > 0)
-        return getQuantified(resources, R.plurals.places, bookmarksCount);
+        return getQuantified(resources, R.plurals.bookmarks_places, bookmarksCount);
 
       return getQuantified(resources, R.plurals.tracks, tracksCount);
     }
@@ -281,9 +280,6 @@ public class Holders
       mName = root.findViewById(R.id.name);
       mVisibilityMarker = root.findViewById(R.id.checkbox);
       mMoreButton = root.findViewById(R.id.more);
-      int left = root.getResources().getDimensionPixelOffset(R.dimen.margin_half_plus);
-      int right = root.getResources().getDimensionPixelOffset(R.dimen.margin_base_plus);
-      UiUtils.expandTouchAreaForView(mVisibilityMarker, 0, left, 0, right);
     }
 
     void setVisibilityState(boolean visible)
@@ -393,6 +389,7 @@ public class Holders
     private final TextView mName;
     @NonNull
     private final TextView mDistance;
+    private final ImageView mMoreButton;
 
     TrackViewHolder(@NonNull View itemView)
     {
@@ -400,6 +397,7 @@ public class Holders
       mIcon = itemView.findViewById(R.id.iv__bookmark_color);
       mName = itemView.findViewById(R.id.tv__bookmark_name);
       mDistance = itemView.findViewById(R.id.tv__bookmark_distance);
+      mMoreButton = itemView.findViewById(R.id.more);
     }
 
     @Override
@@ -417,6 +415,16 @@ public class Holders
       Drawable circle = Graphics.drawCircle(track.getColor(), R.dimen.track_circle_size,
                                             mIcon.getContext().getResources());
       mIcon.setImageDrawable(circle);
+    }
+
+    public void setMoreButtonClickListener(RecyclerClickListener listener)
+    {
+      mMoreButton.setOnClickListener(v -> listener.onItemClick(v, getBindingAdapterPosition()));
+    }
+
+    public void setTrackIconClickListener(IconClickListener listener)
+    {
+      mIcon.setOnClickListener(v -> listener.onItemClick((ImageView) v, getBindingAdapterPosition()));
     }
   }
 
@@ -460,20 +468,19 @@ public class Holders
               @NonNull BookmarkListAdapter.SectionsDataSource sectionsDataSource)
     {
       mTitle.setText(sectionsDataSource.getCategory().getName());
-      bindDescriptionIfEmpty(sectionsDataSource.getCategory());
+      bindDescription(sectionsDataSource.getCategory());
     }
 
-    private void bindDescriptionIfEmpty(@NonNull BookmarkCategory category)
+    private void bindDescription(@NonNull BookmarkCategory category)
     {
-      if (TextUtils.isEmpty(mDescText.getText()))
-      {
-        String desc = TextUtils.isEmpty(category.getAnnotation())
-                      ? category.getDescription()
-                      : category.getAnnotation();
+      String desc = TextUtils.isEmpty(category.getAnnotation())
+                    ? category.getDescription()
+                    : category.getAnnotation();
 
-        Spanned spannedDesc = Utils.fromHtml(desc);
-        mDescText.setText(spannedDesc);
-      }
+      Spanned spannedDesc = Utils.fromHtml(desc);
+      mDescText.setText(spannedDesc);
+
+      UiUtils.showIf(!TextUtils.isEmpty(spannedDesc), mDescText);
     }
   }
 }

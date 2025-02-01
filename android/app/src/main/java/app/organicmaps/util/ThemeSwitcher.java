@@ -1,11 +1,13 @@
 package app.organicmaps.util;
 
 import android.app.Activity;
+import android.app.UiModeManager;
 import android.content.Context;
 import android.location.Location;
+import android.os.Build;
 
 import androidx.annotation.NonNull;
-
+import androidx.appcompat.app.AppCompatDelegate;
 import app.organicmaps.Framework;
 import app.organicmaps.MwmApplication;
 import app.organicmaps.R;
@@ -30,18 +32,18 @@ public enum ThemeSwitcher
       String nightTheme = MwmApplication.from(mContext).getString(R.string.theme_night);
       String defaultTheme = MwmApplication.from(mContext).getString(R.string.theme_default);
       String theme = defaultTheme;
+      Location last = LocationHelper.from(mContext).getSavedLocation();
 
-      if (RoutingController.get().isNavigating())
+      boolean navAuto = RoutingController.get().isNavigating() && ThemeUtils.isNavAutoTheme(mContext);
+
+      if (navAuto || ThemeUtils.isAutoTheme(mContext))
       {
-        Location last = LocationHelper.from(mContext).getSavedLocation();
         if (last == null)
-        {
           theme = Config.getCurrentUiTheme(mContext);
-        }
         else
         {
-          boolean day = Framework.nativeIsDayTime(System.currentTimeMillis() / 1000,
-                                                  last.getLatitude(), last.getLongitude());
+          long currentTime = System.currentTimeMillis() / 1000;
+          boolean day = Framework.nativeIsDayTime(currentTime, last.getLatitude(), last.getLongitude());
           theme = (day ? defaultTheme : nightTheme);
         }
       }
@@ -49,7 +51,7 @@ public enum ThemeSwitcher
       setThemeAndMapStyle(theme);
       UiThread.cancelDelayedTasks(mAutoThemeChecker);
 
-      if (ThemeUtils.isAutoTheme(mContext))
+      if (navAuto || ThemeUtils.isAutoTheme(mContext))
         UiThread.runLater(mAutoThemeChecker, CHECK_INTERVAL_MS);
     }
   };
@@ -77,7 +79,7 @@ public enum ThemeSwitcher
   {
     mRendererActive = isRendererActive;
     String theme = Config.getUiThemeSettings(mContext);
-    if (ThemeUtils.isAutoTheme(mContext, theme))
+    if (ThemeUtils.isAutoTheme(mContext, theme) || ThemeUtils.isNavAutoTheme(mContext, theme))
     {
       mAutoThemeChecker.run();
       return;
@@ -89,6 +91,7 @@ public enum ThemeSwitcher
 
   private void setThemeAndMapStyle(@NonNull String theme)
   {
+    UiModeManager uiModeManager = (UiModeManager) mContext.getSystemService(Context.UI_MODE_SERVICE);
     String oldTheme = Config.getCurrentUiTheme(mContext);
     @Framework.MapStyle
     int oldStyle = Framework.nativeGetMapStyle();
@@ -97,6 +100,11 @@ public enum ThemeSwitcher
     int style;
     if (ThemeUtils.isNightTheme(mContext, theme))
     {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+        uiModeManager.setApplicationNightMode(UiModeManager.MODE_NIGHT_YES);
+      else
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+
       if (RoutingController.get().isVehicleNavigation())
         style = Framework.MAP_STYLE_VEHICLE_DARK;
       else if (Framework.nativeIsOutdoorsLayerEnabled())
@@ -106,6 +114,11 @@ public enum ThemeSwitcher
     }
     else
     {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+        uiModeManager.setApplicationNightMode(UiModeManager.MODE_NIGHT_NO);
+      else
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+
       if (RoutingController.get().isVehicleNavigation())
         style = Framework.MAP_STYLE_VEHICLE_CLEAR;
       else if (Framework.nativeIsOutdoorsLayerEnabled())

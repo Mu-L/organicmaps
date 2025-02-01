@@ -173,7 +173,7 @@ bool GeoParser::Parse(std::string const & raw, GeoURLInfo & info) const
   /*
    * Check that URI starts with geo:
    */
-  if (!strings::StartsWith(raw, "geo:"))
+  if (!raw.starts_with("geo:"))
     return false;
 
   /*
@@ -196,6 +196,15 @@ bool GeoParser::Parse(std::string const & raw, GeoURLInfo & info) const
     return false;
   ASSERT_EQUAL(url.GetScheme(), "geo", ());
 
+  // Fix non-RFC url/hostname, reported by an Android user, with & instead of ?
+  std::string_view constexpr kWrongZoomInHost = "&z=";
+  if (std::string::npos != url.GetHost().find(kWrongZoomInHost))
+  {
+    auto fixedUrl = raw;
+    fixedUrl.replace(raw.find(kWrongZoomInHost), 1, 1, std::string::value_type{'?'});
+    url = url::Url{fixedUrl};
+  }
+
   /*
    * Parse coordinates before ';' character
    */
@@ -205,8 +214,13 @@ bool GeoParser::Parse(std::string const & raw, GeoURLInfo & info) const
     std::smatch m;
     if (!std::regex_match(coordinates, m, m_latlonRe) || m.size() < 3)
     {
-      LOG(LWARNING, ("Missing coordinates in", raw));
-      return false;
+      // no match? try URL decoding before giving up
+      coordinates = url::UrlDecode(coordinates);
+      if (!std::regex_match(coordinates, m, m_latlonRe) || m.size() < 3)
+      {
+        LOG(LWARNING, ("Missing coordinates in", raw));
+        return false;
+      }
     }
 
     double lat, lon;
@@ -365,7 +379,7 @@ bool GeoURLInfo::SetLon(double x)
 
 bool UnifiedParser::Parse(std::string const & raw, GeoURLInfo & res)
 {
-  if (strings::StartsWith(raw, "geo:"))
+  if (raw.starts_with("geo:"))
     return m_geoParser.Parse(raw, res);
 
   url::Url url(raw);

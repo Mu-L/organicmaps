@@ -1,13 +1,16 @@
 package app.organicmaps.editor;
 
 import android.os.Bundle;
+import android.text.method.LinkMovementMethod;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.widget.NestedScrollView;
 
 import app.organicmaps.R;
 import app.organicmaps.base.BaseMwmRecyclerFragment;
@@ -18,6 +21,7 @@ import app.organicmaps.util.Language;
 import app.organicmaps.util.Utils;
 
 import java.util.Arrays;
+import java.util.Comparator;
 
 public class FeatureCategoryFragment extends BaseMwmRecyclerFragment<FeatureCategoryAdapter>
 {
@@ -55,6 +59,7 @@ public class FeatureCategoryFragment extends BaseMwmRecyclerFragment<FeatureCate
         setFilter(query);
       }
     };
+
   }
 
   private void setFilter(String query)
@@ -67,6 +72,7 @@ public class FeatureCategoryFragment extends BaseMwmRecyclerFragment<FeatureCate
     FeatureCategory[] categories = makeFeatureCategoriesFromTypes(creatableTypes);
 
     getAdapter().setCategories(categories);
+    getRecyclerView().scrollToPosition(0);
   }
 
   @NonNull
@@ -92,8 +98,7 @@ public class FeatureCategoryFragment extends BaseMwmRecyclerFragment<FeatureCate
       categories[i] = new FeatureCategory(creatableTypes[i], localizedType);
     }
 
-    Arrays.sort(categories, (lhs, rhs) ->
-      lhs.getLocalizedTypeName().compareTo(rhs.getLocalizedTypeName()));
+    Arrays.sort(categories, Comparator.comparing(FeatureCategory::getLocalizedTypeName));
 
     return categories;
   }

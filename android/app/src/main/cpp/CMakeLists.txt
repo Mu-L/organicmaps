@@ -41,6 +41,7 @@ set(SRC
   app/organicmaps/SearchEngine.cpp
   app/organicmaps/SearchRecents.cpp
   app/organicmaps/settings/UnitLocale.cpp
+  app/organicmaps/settings/MapLanguageCode.cpp
   app/organicmaps/sound/tts.cpp
   app/organicmaps/subway/SubwayManager.cpp
   app/organicmaps/TrackRecorder.cpp
@@ -65,6 +66,7 @@ set(SRC
   app/organicmaps/util/LogsManager.cpp
   app/organicmaps/util/NetworkPolicy.cpp
   app/organicmaps/util/StringUtils.cpp
+  app/organicmaps/util/UiThread.cpp
   app/organicmaps/vulkan/android_vulkan_context_factory.cpp
 )
 
@@ -98,7 +100,6 @@ target_link_libraries(${PROJECT_NAME}
   # base
   # opening_hours
   # pugixml
-  # oauthcpp
   # expat
   # freetype
   # minizip
@@ -106,7 +107,6 @@ target_link_libraries(${PROJECT_NAME}
   # protobuf
   # succinct
   # stb_image
-  # sdf_image
   # icu
   # agg
   # vulkan_wrapper

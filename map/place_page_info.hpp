@@ -11,12 +11,10 @@
 
 #include "indexer/feature_data.hpp"
 #include "indexer/feature_source.hpp"
-#include "indexer/ftypes_matcher.hpp"
 #include "indexer/map_object.hpp"
 
 #include "geometry/point2d.hpp"
 
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -118,6 +116,9 @@ public:
   bool ShouldShowAddBusiness() const { return m_canEditOrAdd && IsBuilding(); }
   bool ShouldShowEditPlace() const;
 
+  bool ShouldEnableAddPlace() const { return m_canEditOrAdd; };
+  bool ShouldEnableEditPlace() const { return m_canEditOrAdd; };
+
   /// @returns true if Back API button should be displayed.
   bool HasApiUrl() const { return !m_apiUrl.empty(); }
   /// TODO: Support all possible Internet types in UI. @See MapObject::GetInternet().
@@ -132,7 +133,7 @@ public:
   std::string const & GetSecondaryTitle() const { return m_uiSecondaryTitle; };
   /// Convenient wrapper for type, cuisines, elevation, stars, wifi etc.
   std::string const & GetSubtitle() const { return m_uiSubtitle; };
-  std::string const & GetAddress() const { return m_uiAddress; }
+  std::string const & GetSecondarySubtitle() const { return !m_uiTrackStatistics.empty() ? m_uiTrackStatistics : m_uiAddress; };
   std::string const & GetWikiDescription() const { return m_description; }
   /// @returns coordinate in DMS format if isDMS is true
   std::string GetFormattedCoordinate(CoordinatesFormat format) const;
@@ -140,11 +141,11 @@ public:
   /// UI setters
   void SetCustomName(std::string const & name);
   void SetTitlesForBookmark();
+  void SetTitlesForTrack(Track const & track);
   void SetCustomNames(std::string const & title, std::string const & subtitle);
   void SetCustomNameWithCoordinates(m2::PointD const & mercator, std::string const & name);
   void SetAddress(std::string && address) { m_address = std::move(address); }
   void SetCanEditOrAdd(bool canEditOrAdd) { m_canEditOrAdd = canEditOrAdd; }
-  void SetLocalizedWifiString(std::string const & str) { m_localizedWifiString = str; }
 
   /// Bookmark
   void SetFromBookmarkProperties(kml::Properties const & p);
@@ -207,7 +208,7 @@ public:
   void SetMercator(m2::PointD const & mercator);
   std::vector<std::string> GetRawTypes() const { return m_types.ToObjectNames(); }
 
-  std::optional<ftypes::IsHotelChecker::Type> GetHotelType() const { return m_hotelType; }
+  bool IsHotel() const { return m_isHotel; }
 
   // void SetPopularity(uint8_t popularity) { m_popularity = popularity; }
   // uint8_t GetPopularity() const { return m_popularity; }
@@ -217,7 +218,7 @@ public:
   df::SelectionShape::ESelectedObject GetSelectedObject() const { return m_selectedObject; }
 
 private:
-  std::string FormatSubtitle(bool withType) const;
+  std::string FormatSubtitle(bool withTypes, bool withMainType) const;
   std::string GetBookmarkName();
 
   place_page::BuildInfo m_buildInfo;
@@ -227,9 +228,8 @@ private:
   std::string m_uiSubtitle;
   std::string m_uiSecondaryTitle;
   std::string m_uiAddress;
+  std::string m_uiTrackStatistics;
   std::string m_description;
-  // TODO(AlexZ): Temporary solution. It's better to use a wifi icon in UI instead of text.
-  std::string m_localizedWifiString;
   /// Booking rating string
   std::string m_localizedRatingString;
 
@@ -278,7 +278,7 @@ private:
   /// Feature status
   FeatureStatus m_featureStatus = FeatureStatus::Untouched;
 
-  std::optional<ftypes::IsHotelChecker::Type> m_hotelType;
+  bool m_isHotel = false;
 
   //uint8_t m_popularity = 0;
 

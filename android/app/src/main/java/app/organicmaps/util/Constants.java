@@ -51,5 +51,19 @@ public final class Constants
     private Package() {}
   }
 
+  public static class Vendor
+  {
+    public static final String HUAWEI = "HUAWEI";
+    public static final String XIAOMI = "XIAOMI";
+  }
+
+  public static class ProductsPopupCloseReason
+  {
+    public static final String CLOSE = "close";
+    public static final String REMIND_LATER = "remind_later";
+    public static final String ALREADY_DONATED = "already_donated";
+    public static final String SELECT_PRODUCT = "select_product";
+  }
+
   private Constants() {}
 }

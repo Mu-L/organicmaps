@@ -161,6 +161,11 @@ extension BookmarksListViewController: UITableViewDelegate {
     }
     return UISwipeActionsConfiguration(actions: [deleteAction, editAction])
   }
+
+  func tableView(_ tableView: UITableView, accessoryButtonTappedForRowWith indexPath: IndexPath) {
+    guard let section = sections?[indexPath.section] else { fatalError() }
+    presenter.editItem(in: section, at: indexPath.row)
+  }
 }
 
 extension BookmarksListViewController: UISearchBarDelegate {
@@ -209,7 +214,7 @@ extension BookmarksListViewController: IBookmarksListView {
     moreToolbarItem.title = itemTitle
   }
 
-  func showMenu(_ items: [IBookmarksListMenuItem]) {
+  func showMenu(_ items: [IBookmarksListMenuItem], from source: BookmarkToolbarButtonSource) {
     let actionSheet = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
     items.forEach { item in
       let action = UIAlertAction(title: item.title, style: item.destructive ? .destructive : .default) { _ in
@@ -219,7 +224,11 @@ extension BookmarksListViewController: IBookmarksListView {
       actionSheet.addAction(action)
     }
     actionSheet.addAction(UIAlertAction(title: L("cancel"), style: .cancel, handler: nil))
-    actionSheet.popoverPresentationController?.barButtonItem = sortToolbarItem
+    let barButtonItem = switch source {
+      case .sort: sortToolbarItem
+      case .more: moreToolbarItem
+    }
+    actionSheet.popoverPresentationController?.barButtonItem = barButtonItem
     present(actionSheet, animated: true)
   }
 
@@ -237,7 +246,7 @@ extension BookmarksListViewController: IBookmarksListView {
                                                        message: L("share_bookmarks_email_body")) { (_, _, _, _) in
       completion()
     }
-    shareController?.present(inParentViewController: self, anchorView: self.toolBar)
+    shareController.present(inParentViewController: self, anchorView: self.toolBar)
   }
 
   func showError(title: String, message: String) {

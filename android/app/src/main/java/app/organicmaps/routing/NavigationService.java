@@ -4,6 +4,7 @@ import static android.Manifest.permission.ACCESS_COARSE_LOCATION;
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static android.Manifest.permission.POST_NOTIFICATIONS;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static app.organicmaps.util.Constants.Vendor.XIAOMI;
 
 import android.annotation.SuppressLint;
 import android.app.ForegroundServiceStartNotAllowedException;
@@ -36,6 +37,7 @@ import app.organicmaps.sound.MediaPlayerWrapper;
 import app.organicmaps.location.LocationHelper;
 import app.organicmaps.location.LocationListener;
 import app.organicmaps.sound.TtsPlayer;
+import app.organicmaps.util.Config;
 import app.organicmaps.util.Graphics;
 import app.organicmaps.util.LocationUtils;
 import app.organicmaps.util.log.Logger;
@@ -43,6 +45,7 @@ import app.organicmaps.util.log.Logger;
 public class NavigationService extends Service implements LocationListener
 {
   private static final String TAG = NavigationService.class.getSimpleName();
+  private static final String STOP_NAVIGATION = "STOP_NAVIGATION";
 
   private static final String CHANNEL_ID = "NAVIGATION";
   private static final int NOTIFICATION_ID = 12345678;
@@ -123,7 +126,7 @@ public class NavigationService extends Service implements LocationListener
     // Nice colorized notifications should be supported on API=26 and later.
     // Nonetheless, even on API=32, Xiaomi uses their own legacy implementation that displays white-on-white instead.
     return Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-        !"xiaomi".equalsIgnoreCase(Build.MANUFACTURER);
+        !XIAOMI.equalsIgnoreCase(Build.MANUFACTURER);
   }
 
   @NonNull
@@ -135,7 +138,12 @@ public class NavigationService extends Service implements LocationListener
     final int FLAG_IMMUTABLE = Build.VERSION.SDK_INT < Build.VERSION_CODES.M ? 0 : PendingIntent.FLAG_IMMUTABLE;
     final Intent contentIntent = new Intent(context, MwmActivity.class);
     final PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, contentIntent,
-        PendingIntent.FLAG_CANCEL_CURRENT | FLAG_IMMUTABLE);
+        PendingIntent.FLAG_UPDATE_CURRENT | FLAG_IMMUTABLE);
+
+    final Intent exitIntent = new Intent(context, NavigationService.class);
+    exitIntent.setAction(STOP_NAVIGATION);
+    final PendingIntent exitPendingIntent = PendingIntent.getService(context, 0, exitIntent,
+        PendingIntent.FLAG_UPDATE_CURRENT | FLAG_IMMUTABLE);
 
     mNotificationBuilder = new NotificationCompat.Builder(context, CHANNEL_ID)
         .setCategory(NotificationCompat.CATEGORY_NAVIGATION)
@@ -146,6 +154,7 @@ public class NavigationService extends Service implements LocationListener
         .setOnlyAlertOnce(true)
         .setSmallIcon(R.drawable.ic_splash)
         .setContentIntent(pendingIntent)
+        .addAction(0, context.getString(R.string.navigation_stop_button), exitPendingIntent)
         .setColorized(isColorizedSupported())
         .setColor(ContextCompat.getColor(context, R.color.notification));
 
@@ -184,6 +193,14 @@ public class NavigationService extends Service implements LocationListener
   @Override
   public int onStartCommand(@NonNull Intent intent, int flags, int startId)
   {
+    final String action = intent.getAction();
+    if (action != null && action.equals(STOP_NAVIGATION))
+    {
+      RoutingController.get().cancel();
+      stopSelf();
+      return START_NOT_STICKY;
+    }
+
     if (!MwmApplication.from(this).arePlatformAndCoreInitialized())
     {
       // The system restarts the service if the app's process has crashed or been stopped. It would be nice to
@@ -250,7 +267,8 @@ public class NavigationService extends Service implements LocationListener
     if (!routingController.isNavigating())
       return;
 
-    final String[] turnNotifications = Framework.nativeGenerateNotifications();
+    // Voice the turn notification first.
+    final String[] turnNotifications = Framework.nativeGenerateNotifications(Config.TTS.getAnnounceStreets());
     if (turnNotifications != null)
       TtsPlayer.INSTANCE.playTurnNotifications(turnNotifications);
 
